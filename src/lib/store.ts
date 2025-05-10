@@ -57,9 +57,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   fetchUserData: async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error } = await supabase.auth.getUser();
 
-    if (!user) {
+    if (!user || error) {
       set({ isLoading: false });
       return;
     }
@@ -67,7 +67,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const isAdmin = user.email?.includes('admin') || false;
 
     if (isAdmin) {
-      set({ 
+      set({
         user: { id: user.id, email: user.email!, role: 'admin' },
         isAdmin: true,
         isLoading: false
@@ -75,15 +75,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       return;
     }
 
-    const { data: clientData, error } = await supabase
+    const { data: clientData, error: clientError } = await supabase
       .from('clients')
       .select('*')
       .eq('user_id', user.id)
       .single();
 
-    if (error || !clientData) {
-      set({ 
+    if (clientError || !clientData) {
+      set({
         user: { id: user.id, email: user.email!, role: 'client' },
+        client: null,
         isLoading: false
       });
       return;
@@ -108,7 +109,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       .order('name');
 
     if (error) {
-      console.error('Error fetching clients:', error);
+      console.error('❌ Erro ao buscar clientes:', error);
       set({ isLoadingData: false });
       return;
     }
@@ -121,6 +122,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const targetClientId = clientId || client?.id;
 
     if (!targetClientId && !isAdmin) {
+      console.warn('❌ Nenhum clientId disponível para buscar colunas.');
       set({ isLoadingData: false });
       return;
     }
@@ -136,7 +138,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
 
     if (columnsError) {
-      console.error('Error fetching columns:', columnsError);
+      console.error('❌ Erro ao buscar colunas:', columnsError);
       set({ isLoadingData: false });
       return;
     }
@@ -150,7 +152,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       });
 
     if (leadsError) {
-      console.error('Error fetching leads:', leadsError);
+      console.error('❌ Erro ao buscar leads:', leadsError);
       set({ isLoadingData: false });
       return;
     }
@@ -160,7 +162,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       leads: leadsData.filter(lead => lead.column_id === column.id)
     }));
 
-    set({ 
+    set({
       columns,
       leads: leadsData,
       isLoadingData: false
@@ -170,7 +172,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   moveLead: async (leadId, newColumnId) => {
     const { leads } = get();
     const lead = leads.find(l => l.id === leadId);
-
     if (!lead) return;
 
     const { error } = await supabase
@@ -179,11 +180,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       .eq('id', leadId);
 
     if (error) {
-      console.error('Error moving lead:', error);
+      console.error('❌ Erro ao mover lead:', error);
       return;
     }
 
-    const updatedLeads = leads.map(l => 
+    const updatedLeads = leads.map(l =>
       l.id === leadId ? { ...l, column_id: newColumnId } : l
     );
 
@@ -203,7 +204,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       .select();
 
     if (error) {
-      console.error('Error adding lead:', error);
+      console.error('❌ Erro ao adicionar lead:', error);
       return;
     }
 
@@ -230,7 +231,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       .select();
 
     if (error) {
-      console.error('Error updating lead:', error);
+      console.error('❌ Erro ao atualizar lead:', error);
       return;
     }
 
@@ -260,7 +261,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       .eq('id', leadId);
 
     if (error) {
-      console.error('Error deleting lead:', error);
+      console.error('❌ Erro ao deletar lead:', error);
       return;
     }
 
