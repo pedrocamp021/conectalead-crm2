@@ -29,6 +29,11 @@ export const LoginForm: React.FC = () => {
       if (error) throw error;
 
       await fetchUserData();
+
+      // ✅ Adicionado para exibir usuário no console
+      supabase.auth.getUser().then(({ data }) => {
+        console.log("🧠 Usuário logado:", data.user);
+      });
     } catch (error: any) {
       setError(error.message || 'Failed to login');
     } finally {
