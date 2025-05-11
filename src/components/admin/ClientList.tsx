@@ -16,7 +16,10 @@ export const ClientList: React.FC = () => {
   }, [fetchClients]);
 
   const handleEditClient = (client: Client) => {
-    setSelectedClient(client);
+    setSelectedClient({
+      ...client,
+      expiration: client.expiration_date // Map to match modal's expected prop
+    });
     setIsEditModalOpen(true);
   };
 
@@ -147,13 +150,12 @@ export const ClientList: React.FC = () => {
         </table>
       </div>
       
-      {isEditModalOpen && selectedClient && (
-        <EditClientModal 
-          isOpen={isEditModalOpen} 
-          onClose={() => setIsEditModalOpen(false)} 
-          client={selectedClient}
-        />
-      )}
+      <EditClientModal 
+        open={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        client={selectedClient}
+        onUpdate={fetchClients}
+      />
     </div>
   );
 };
