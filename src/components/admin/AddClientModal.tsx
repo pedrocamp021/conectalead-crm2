@@ -29,7 +29,6 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     setIsLoading(true);
 
     try {
-      // 1. Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -40,7 +39,6 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
       const userId = authData.user.id;
 
-      // 2. Create client record
       const { error: clientError } = await supabase
         .from('clients')
         .insert([
@@ -56,7 +54,6 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
       if (clientError) throw clientError;
 
-      // 3. Get the client ID
       const { data: clientData, error: fetchError } = await supabase
         .from('clients')
         .select('id')
@@ -66,7 +63,6 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
       if (fetchError) throw fetchError;
       if (!clientData) throw new Error('Failed to fetch client data');
 
-      // 4. Create default columns
       const defaultColumns = [
         { name: 'New Leads', order: 1, color: 'blue', client_id: clientData.id },
         { name: 'Contacted', order: 2, color: 'yellow', client_id: clientData.id },
@@ -80,7 +76,6 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
       if (columnsError) throw columnsError;
 
-      // Success
       onClientAdded();
       onClose();
     } catch (err: any) {
