@@ -1,59 +1,31 @@
 import React, { useState } from 'react';
-import { supabase } from '../../lib/supabase';
 import { Client } from '../../lib/types';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { X, Loader2 } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface EditClientModalProps {
   isOpen: boolean;
   onClose: () => void;
   client: Client;
-  onClientUpdated: () => void;
 }
 
 export const EditClientModal: React.FC<EditClientModalProps> = ({ 
   isOpen, 
   onClose,
-  client,
-  onClientUpdated
+  client
 }) => {
   const [name, setName] = useState(client.name);
-  const [email, setEmail] = useState(client.email);
   const [plan, setPlan] = useState(client.plan);
-  const [expiration, setExpiration] = useState(
+  const [status, setStatus] = useState(client.status);
+  const [expirationDate, setExpirationDate] = useState(
     new Date(client.expiration_date).toISOString().split('T')[0]
   );
-  const [status, setStatus] = useState(client.status);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      const { error: updateError } = await supabase
-        .from('clients')
-        .update({
-          name,
-          email,
-          plan,
-          expiration_date: expiration,
-          status,
-        })
-        .eq('id', client.id);
-
-      if (updateError) throw updateError;
-
-      onClientUpdated();
-      onClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to update client');
-    } finally {
-      setIsLoading(false);
-    }
+    // TODO: Implement update logic
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -72,27 +44,12 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
         </div>
         
         <form onSubmit={handleSubmit} className="p-6">
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
-              {error}
-            </div>
-          )}
-          
           <div className="space-y-4">
             <Input
               label="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Client Name"
-              required
-            />
-            
-            <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="client@example.com"
               required
             />
             
@@ -106,19 +63,11 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               >
-                <option value="Basic">Basic</option>
-                <option value="Professional">Professional</option>
-                <option value="Enterprise">Enterprise</option>
+                <option value="free">Free</option>
+                <option value="trial">Trial</option>
+                <option value="monthly">Monthly</option>
               </select>
             </div>
-            
-            <Input
-              label="Expiration Date"
-              type="date"
-              value={expiration}
-              onChange={(e) => setExpiration(e.target.value)}
-              required
-            />
             
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -131,9 +80,17 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
                 required
               >
                 <option value="active">Active</option>
-                <option value="expired">Expired</option>
+                <option value="inactive">Inactive</option>
               </select>
             </div>
+            
+            <Input
+              label="Expiration Date"
+              type="date"
+              value={expirationDate}
+              onChange={(e) => setExpirationDate(e.target.value)}
+              required
+            />
           </div>
           
           <div className="mt-6 flex justify-end space-x-3">
@@ -147,16 +104,8 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             <Button 
               variant="primary"
               type="submit"
-              disabled={isLoading}
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> 
-                  Updating...
-                </>
-              ) : (
-                'Update Client'
-              )}
+              Save Changes
             </Button>
           </div>
         </form>
