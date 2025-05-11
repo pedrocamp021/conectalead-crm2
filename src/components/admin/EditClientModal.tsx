@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
-import { supabase } from '@/lib/supabase';
+import { Input } from '../ui/Input';
+import { Button } from '../ui/Button';
+import { supabase } from '../../lib/supabase';
 
 interface EditClientModalProps {
   open: boolean;
@@ -48,7 +48,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({ open, onClose,
       onUpdate();
       onClose();
     } else {
-      alert('Erro ao salvar.');
+      alert('Error saving changes.');
       console.error(error);
     }
   };
@@ -57,22 +57,56 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({ open, onClose,
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Editar Cliente</DialogTitle>
+          <DialogTitle>Edit Client</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4">
-          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" />
-          <Input value={plan} onChange={(e) => setPlan(e.target.value)} placeholder="Plano" />
-          <Input value={status} onChange={(e) => setStatus(e.target.value)} placeholder="Status" />
+          <Input 
+            label="Name"
+            value={name} 
+            onChange={(e) => setName(e.target.value)} 
+            placeholder="Name" 
+          />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Plan
+            </label>
+            <select
+              value={plan}
+              onChange={(e) => setPlan(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="free">Free</option>
+              <option value="trial">Trial</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Status
+            </label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
           <Input
+            label="Expiration Date"
             type="date"
             value={expiration}
             onChange={(e) => setExpiration(e.target.value)}
-            placeholder="Expiração"
           />
         </div>
         <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
-          <Button onClick={handleSave} disabled={loading}>{loading ? 'Salvando...' : 'Salvar'}</Button>
+          <Button variant="ghost" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleSave} disabled={loading}>
+            {loading ? 'Saving...' : 'Save Changes'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
