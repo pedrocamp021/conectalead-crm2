@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Input } from '../../ui/Input';
-import { Button } from '../../ui/Button';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
 import { supabase } from '../../../lib/supabase';
 
 interface EditClientModalProps {
