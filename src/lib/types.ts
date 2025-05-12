@@ -23,6 +23,13 @@ export interface Column {
   leads?: Lead[];
 }
 
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+  client_id: string;
+}
+
 export interface Lead {
   id: string;
   name: string;
@@ -33,6 +40,7 @@ export interface Lead {
   client_id: string;
   created_at: string;
   has_followup?: boolean;
+  labels?: Label[];
 }
 
 export interface Followup {
