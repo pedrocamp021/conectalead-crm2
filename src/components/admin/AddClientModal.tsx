@@ -38,25 +38,10 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     setIsLoading(true);
 
     try {
-      // 1. Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            role: 'client'
-          }
-        }
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Falha ao criar usuário');
-
-      // 2. Create client record
-      const { error: clientError } = await supabase
+      // Create client record
+      const { data, error } = await supabase
         .from('clients')
         .insert([{
-          id: authData.user.id,
           name: formData.name,
           email: formData.email,
           whatsapp: formData.whatsapp,
@@ -66,18 +51,19 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
           billing_message: formData.billing_message,
           billing_automation_enabled: formData.billing_automation_enabled,
           initial_fee: parseFloat(formData.initial_fee),
-          monthly_fee: parseFloat(formData.monthly_fee),
-          user_id: authData.user.id
-        }]);
+          monthly_fee: parseFloat(formData.monthly_fee)
+        }])
+        .select()
+        .single();
 
-      if (clientError) throw clientError;
+      if (error) throw error;
 
-      // 3. Create default columns
+      // Create default columns
       const defaultColumns = [
-        { name: 'Novos Leads', order: 1, color: 'blue', client_id: authData.user.id },
-        { name: 'Em Contato', order: 2, color: 'yellow', client_id: authData.user.id },
-        { name: 'Reunião Agendada', order: 3, color: 'purple', client_id: authData.user.id },
-        { name: 'Fechado', order: 4, color: 'green', client_id: authData.user.id }
+        { name: 'Novos Leads', order: 1, color: 'blue', client_id: data.id },
+        { name: 'Em Contato', order: 2, color: 'yellow', client_id: data.id },
+        { name: 'Reunião Agendada', order: 3, color: 'purple', client_id: data.id },
+        { name: 'Fechado', order: 4, color: 'green', client_id: data.id }
       ];
 
       const { error: columnsError } = await supabase
@@ -86,20 +72,12 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
       if (columnsError) throw columnsError;
 
-      toast({
-        title: "Cliente cadastrado com sucesso",
-        description: "O cliente foi criado e receberá um email de confirmação.",
-      });
-
+      alert('Cliente cadastrado com sucesso!');
       onClientAdded();
       onClose();
     } catch (error: any) {
       console.error('Erro ao cadastrar cliente:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro ao cadastrar",
-        description: error.message || "Não foi possível cadastrar o cliente.",
-      });
+      alert('Erro ao cadastrar cliente');
     } finally {
       setIsLoading(false);
     }
