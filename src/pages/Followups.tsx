@@ -173,6 +173,34 @@ export const Followups: React.FC = () => {
     }
   };
 
+  const handleDeleteFollowup = async (followupId: string) => {
+    const confirmed = window.confirm("Tem certeza que deseja excluir este agendamento?");
+    if (!confirmed) return;
+
+    try {
+      const { error } = await supabase
+        .from('followups')
+        .delete()
+        .eq('id', followupId);
+
+      if (error) throw error;
+      
+      await fetchFollowups();
+      
+      toast({
+        title: "Agendamento excluído",
+        description: "O agendamento foi removido com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir follow-up:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao excluir",
+        description: "Não foi possível excluir o agendamento. Tente novamente.",
+      });
+    }
+  };
+
   const handleBulkSchedule = async (leads: Lead[], message: string, date: string) => {
     if (!client) return;
 
@@ -398,6 +426,16 @@ export const Followups: React.FC = () => {
                           Cancelar
                         </Button>
                       </>
+                    )}
+                    {followup.status === 'cancelled' && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => handleDeleteFollowup(followup.id)}
+                        icon={<Trash2 className="h-4 w-4" />}
+                      >
+                        Excluir
+                      </Button>
                     )}
                   </div>
                 </td>
