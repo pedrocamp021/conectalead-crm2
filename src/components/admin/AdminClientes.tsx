@@ -4,10 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/use-toast';
-import { 
-  Search, Edit, Trash2, User, Calendar, CheckCircle, XCircle,
-  Clock, Filter, Whatsapp, MessageSquare, BellRing
-} from 'lucide-react';
+import { Search, Edit, Trash2, User, Calendar, CheckCircle, XCircle, Clock, Filter, Wheat as Whatsapp, MessageSquare, BellRing } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface EditClientForm {
