@@ -25,7 +25,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     whatsapp: '',
     plan_type: 'mensal',
     status: 'ativo',
-    billing_day: 1,
+    plan_expiry: new Date().toISOString().split('T')[0],
     billing_message: '',
     billing_automation_enabled: false,
     initial_fee: '0.00',
@@ -58,7 +58,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
           whatsapp: formData.whatsapp,
           plan_type: formData.plan_type,
           status: formData.status,
-          billing_day: formData.billing_day,
+          plan_expiry: formData.plan_expiry,
           billing_message: formData.billing_message,
           billing_automation_enabled: formData.billing_automation_enabled,
           initial_fee: parseFloat(formData.initial_fee),
@@ -148,15 +148,10 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
                 />
 
                 <Input
-                  label="Dia do Vencimento"
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={formData.billing_day}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    billing_day: parseInt(e.target.value) 
-                  })}
+                  label="Data de Vencimento"
+                  type="date"
+                  value={formData.plan_expiry}
+                  onChange={(e) => setFormData({ ...formData, plan_expiry: e.target.value })}
                   required
                 />
               </div>
