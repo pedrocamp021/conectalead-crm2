@@ -87,12 +87,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         throw columnsError;
       }
 
-      toast({
-        title: "Cliente cadastrado com sucesso",
-        description: "O cliente foi adicionado e as colunas padrão foram criadas.",
-      });
-
-      // Reset form and close modal
+      // Reset form data
       setFormData({
         name: '',
         email: '',
@@ -106,7 +101,12 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         monthly_fee: '0.00'
       });
 
-      // Call onClientAdded before closing
+      // Show success message, update list, and close modal
+      toast({
+        title: "Cliente cadastrado com sucesso",
+        description: "O cliente foi adicionado e as colunas padrão foram criadas.",
+      });
+
       onClientAdded();
       onClose();
     } catch (error: any) {
