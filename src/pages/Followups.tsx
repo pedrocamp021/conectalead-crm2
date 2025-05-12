@@ -112,6 +112,71 @@ export const Followups: React.FC = () => {
     fetchData();
   }, [client, selectedLeadId]);
 
+  const handleEditFollowup = async () => {
+    if (!editingFollowup) return;
+
+    try {
+      const { error } = await supabase
+        .from('followups')
+        .update({
+          message_template: editingFollowup.message_template,
+          scheduled_for: editingFollowup.scheduled_for
+        })
+        .eq('id', editingFollowup.id);
+
+      if (error) throw error;
+
+      await fetchFollowups();
+      setEditingFollowup(null);
+    } catch (error) {
+      console.error('Erro ao atualizar follow-up:', error);
+      alert('Erro ao salvar alterações. Por favor, tente novamente.');
+    }
+  };
+
+  const handleCancelFollowup = async (followupId: string) => {
+    if (!window.confirm('Tem certeza que deseja cancelar esta mensagem?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('followups')
+        .update({ status: 'cancelled' })
+        .eq('id', followupId);
+
+      if (error) throw error;
+      await fetchFollowups();
+    } catch (error) {
+      console.error('Erro ao cancelar follow-up:', error);
+      alert('Erro ao cancelar mensagem. Por favor, tente novamente.');
+    }
+  };
+
+  const handleBulkSchedule = async (leads: Lead[], message: string, date: string) => {
+    if (!client) return;
+
+    try {
+      const followups = leads.map(lead => ({
+        lead_id: lead.id,
+        client_id: client.id,
+        message_template: message,
+        scheduled_for: date,
+        status: 'scheduled'
+      }));
+
+      const { error } = await supabase
+        .from('followups')
+        .insert(followups);
+
+      if (error) throw error;
+      await fetchFollowups();
+    } catch (error) {
+      console.error('Erro ao agendar mensagens em massa:', error);
+      alert('Erro ao agendar mensagens. Por favor, tente novamente.');
+    }
+  };
+
   const filteredFollowups = followups.filter(followup => {
     const matchesSearch = followup.leads.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || followup.status === statusFilter;
