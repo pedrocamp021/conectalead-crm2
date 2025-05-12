@@ -142,6 +142,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Fixed Header */}
         <DialogHeader className="flex-shrink-0 px-6 py-4 border-b">
           <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
         </DialogHeader>
