@@ -142,14 +142,14 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0 px-6 py-4 border-b">
           <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1">
           {/* Scrollable Form Content */}
-          <div className="flex-1 overflow-y-auto px-1 py-4">
-            <div className="space-y-4 pb-24">
+          <div className="flex-1 overflow-y-auto px-6">
+            <div className="space-y-4 py-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
                   label="Nome da Empresa *"
@@ -282,7 +282,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
           </div>
 
           {/* Fixed Button Container */}
-          <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-gray-200 bg-white sticky bottom-0 px-6 pb-4">
+          <div className="flex-shrink-0 px-6 py-4 bg-white border-t flex justify-end space-x-2">
             <Button
               variant="ghost"
               onClick={onClose}
