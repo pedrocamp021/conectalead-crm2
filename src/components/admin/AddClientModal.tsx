@@ -32,6 +32,12 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     monthly_fee: '0.00'
   });
 
+  const formatCurrency = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    const floatValue = parseFloat(numericValue) / 100;
+    return floatValue.toFixed(2);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -60,7 +66,6 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         .single();
 
       if (insertError) throw insertError;
-      if (!data) throw new Error('Nenhum dado retornado após inserção');
 
       const defaultColumns = [
         { name: 'Novos Leads', order: 1, color: 'blue', client_id: data.id },
@@ -69,16 +74,8 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         { name: 'Fechado', order: 4, color: 'green', client_id: data.id }
       ];
 
-      const { error: columnsError } = await supabase
-        .from('columns')
-        .insert(defaultColumns);
-
+      const { error: columnsError } = await supabase.from('columns').insert(defaultColumns);
       if (columnsError) throw columnsError;
-
-      toast({
-        title: "Cliente cadastrado com sucesso",
-        description: "O cliente foi adicionado e as colunas padrão foram criadas.",
-      });
 
       setFormData({
         name: '',
@@ -93,27 +90,26 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         monthly_fee: '0.00'
       });
 
+      toast({
+        title: 'Cliente cadastrado com sucesso',
+        description: 'O cliente foi adicionado e as colunas padrão foram criadas.',
+      });
+
+      onClientAdded();
       setTimeout(() => {
-        onClientAdded();
         onClose();
-      }, 300);
+      }, 100); // Pequeno delay para garantir que o toast apareça antes do fechamento
 
     } catch (error: any) {
-      console.error('Erro ao cadastrar cliente:', JSON.stringify(error, null, 2));
+      console.error('Erro ao cadastrar cliente:', error);
       toast({
-        variant: "destructive",
-        title: "Erro ao cadastrar",
-        description: error.message || "Não foi possível cadastrar o cliente.",
+        variant: 'destructive',
+        title: 'Erro ao cadastrar',
+        description: error.message || 'Não foi possível cadastrar o cliente.',
       });
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatCurrency = (value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, '');
-    const floatValue = parseFloat(numericValue) / 100;
-    return floatValue.toFixed(2);
   };
 
   return (
