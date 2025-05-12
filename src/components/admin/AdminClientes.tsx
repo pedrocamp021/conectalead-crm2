@@ -352,7 +352,7 @@ const AdminClientes: React.FC = () => {
 
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
         <DialogContent className="max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex-shrink-0">
+          <DialogHeader>
             <DialogTitle>Editar Cliente</DialogTitle>
           </DialogHeader>
           
