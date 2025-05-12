@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Save, Loader2 } from 'lucide-react';
-import { useToast } from '../ui/use-toast';
+import { useToast } from '../components/ui/use-toast';
 
 export const Profile: React.FC = () => {
   const { client, user } = useAppStore();
