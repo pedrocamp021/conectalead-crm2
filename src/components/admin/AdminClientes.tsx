@@ -489,3 +489,5 @@ export const AdminClientes: React.FC = () => {
     </div>
   );
 };
+
+export { AdminClientes }
