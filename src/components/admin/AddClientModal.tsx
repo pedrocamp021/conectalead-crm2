@@ -4,7 +4,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../ui/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus } from 'lucide-react'; // ✅ IMPORTAÇÃO CORRIGIDA
 
 interface AddClientModalProps {
   onClientAdded: () => void;
@@ -75,9 +75,6 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         description: "O cliente foi adicionado e as colunas padrão foram criadas."
       });
 
-      onClientAdded();
-      setIsModalOpen(false);
-
       setFormData({
         name: '',
         email: '',
@@ -90,6 +87,9 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         initial_fee: '0.00',
         monthly_fee: '0.00'
       });
+
+      setIsModalOpen(false); // ✅ Fecha modal corretamente
+      onClientAdded();        // ✅ Atualiza lista de clientes
     } catch (error: any) {
       console.error('Erro ao cadastrar cliente:', JSON.stringify(error, null, 2));
       toast({
