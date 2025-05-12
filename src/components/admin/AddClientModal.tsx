@@ -39,14 +39,18 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
     try {
       // 1. Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        email_confirm: true
+        options: {
+          data: {
+            role: 'client'
+          }
+        }
       });
 
       if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user');
+      if (!authData.user) throw new Error('Falha ao criar usuário');
 
       // 2. Create client record
       const { error: clientError } = await supabase
@@ -62,7 +66,8 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
           billing_message: formData.billing_message,
           billing_automation_enabled: formData.billing_automation_enabled,
           initial_fee: parseFloat(formData.initial_fee),
-          monthly_fee: parseFloat(formData.monthly_fee)
+          monthly_fee: parseFloat(formData.monthly_fee),
+          user_id: authData.user.id
         }]);
 
       if (clientError) throw clientError;
@@ -81,12 +86,9 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
       if (columnsError) throw columnsError;
 
-      // 4. Send password reset email
-      await supabase.auth.resetPasswordForEmail(formData.email);
-
       toast({
         title: "Cliente cadastrado com sucesso",
-        description: "Um email de redefinição de senha foi enviado.",
+        description: "O cliente foi criado e receberá um email de confirmação.",
       });
 
       onClientAdded();
