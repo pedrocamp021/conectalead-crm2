@@ -492,4 +492,4 @@ const AdminClientes: React.FC = () => {
 
 export default AdminClientes;
 
-export { AdminClientes }
+export { AdminClientes };
