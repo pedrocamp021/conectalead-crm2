@@ -4,8 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { useToast } from '../ui/use-toast';
-import { Search, Edit, Trash2, User, Calendar, CheckCircle, XCircle, Clock, Filter, Wheat as Whatsapp, MessageSquare, BellRing } from 'lucide-react';
+import { Search, Edit, Trash2, User, Calendar, CheckCircle, XCircle, Clock, Filter, Plus, Wheat as Whatsapp, MessageSquare, BellRing } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { AddClientModal } from './AddClientModal';
 
 interface EditClientForm {
   id: string;
@@ -19,7 +20,7 @@ interface EditClientForm {
   billing_automation_enabled: boolean;
 }
 
-const AdminClientes: React.FC = () => {
+export const AdminClientes: React.FC = () => {
   const { toast } = useToast();
   const [clients, setClients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,6 +29,7 @@ const AdminClientes: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<EditClientForm | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const fetchClients = async () => {
     try {
@@ -203,6 +205,21 @@ const AdminClientes: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Gestão de Clientes</h2>
+          <p className="text-gray-600 mt-1">Gerencie os clientes e suas configurações</p>
+        </div>
+
+        <Button
+          variant="primary"
+          onClick={() => setIsAddModalOpen(true)}
+          icon={<Plus className="h-4 w-4" />}
+        >
+          Cadastrar Cliente
+        </Button>
+      </div>
+
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
@@ -463,8 +480,12 @@ const AdminClientes: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AddClientModal
+        open={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onClientAdded={fetchClients}
+      />
     </div>
   );
 };
-
-export { AdminClientes };
