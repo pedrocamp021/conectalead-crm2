@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useAppStore } from '../lib/store';
 import { DashboardPage } from '../components/dashboard/DashboardPage';
 import { ClientDashboard } from '../components/dashboard/ClientDashboard';
-import { supabase } from '../lib/supabase';
 
 export const Dashboard: React.FC = () => {
   const { isAdmin, client } = useAppStore();
@@ -11,7 +10,7 @@ export const Dashboard: React.FC = () => {
   useEffect(() => {
     if (client && client.status !== 'ativo') {
       setBlocked(true);
-      supabase.auth.signOut();
+      // Removido o signOut para mostrar a tela amigável
     }
   }, [client]);
 
