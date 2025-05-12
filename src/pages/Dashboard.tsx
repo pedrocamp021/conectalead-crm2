@@ -1,37 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useAppStore } from '../lib/store';
 import { DashboardPage } from '../components/dashboard/DashboardPage';
 import { ClientDashboard } from '../components/dashboard/ClientDashboard';
 
 export const Dashboard: React.FC = () => {
-  const { isAdmin, client } = useAppStore();
-  const [blocked, setBlocked] = useState(false);
-
-  useEffect(() => {
-    if (client && client.status !== 'ativo') {
-      setBlocked(true);
-      // Removido o signOut para mostrar a tela amigável
-    }
-  }, [client]);
-
-  if (blocked) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-white text-center px-6">
-        <h2 className="text-2xl font-bold text-red-600 mb-4">Acesso Inativo</h2>
-        <p className="text-gray-700 mb-6">
-          Seu acesso está temporariamente inativo. Para reativação, fale com nosso suporte.
-        </p>
-        <a
-          href="https://wa.me/5561994142031"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded"
-        >
-          Falar com o Suporte no WhatsApp
-        </a>
-      </div>
-    );
-  }
+  const { isAdmin } = useAppStore();
 
   return isAdmin ? <DashboardPage /> : <ClientDashboard />;
 };
