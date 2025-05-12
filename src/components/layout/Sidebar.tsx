@@ -7,7 +7,8 @@ import {
   BarChart3, 
   LogOut,
   X,
-  MessageSquare
+  MessageSquare,
+  Calendar
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -42,9 +43,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       name: 'Reports',
       path: '/reports',
       icon: <BarChart3 className="w-5 h-5" />,
-      show: false, // Future feature
+      show: false,
     },
   ];
+
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
   return (
     <>
@@ -52,7 +59,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {isOpen && (
         <div 
           className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
-          onClick={onClose}
+          onClick={handleOverlayClick}
         />
       )}
       
