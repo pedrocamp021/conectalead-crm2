@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useAppStore } from '../lib/store';
-import { supabase } from '../lib/supabase';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { useAppStore } from '../../lib/store';
+import { supabase } from '../../lib/supabase';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { BulkScheduleModal } from '../components/followup/BulkScheduleModal';
 import { 
   Loader2, Plus, Calendar, MessageSquare, Clock, Edit, 
   Trash2, CheckCircle, XCircle, Users, Search, Filter 
 } from 'lucide-react';
-import type { Followup, Lead, Column } from '../lib/types';
+import type { Followup, Lead, Column } from '../../lib/types';
 
 type StatusFilter = 'all' | 'scheduled' | 'sent' | 'cancelled';
 
