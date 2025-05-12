@@ -41,6 +41,11 @@ export interface Followup {
   scheduled_for: string;
   message_template: string;
   created_at: string;
+  status: 'scheduled' | 'sent' | 'cancelled';
+  leads?: {
+    name: string;
+    phone: string;
+  };
 }
 
 export interface AuthState {
