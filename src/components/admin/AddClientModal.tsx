@@ -32,15 +32,9 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     monthly_fee: '0.00'
   });
 
-  const formatCurrency = (value: string) => {
-    const numericValue = value.replace(/[^0-9]/g, '');
-    const floatValue = parseFloat(numericValue) / 100;
-    return floatValue.toFixed(2);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLoading) return; // Prevent double submission
+    if (isLoading) return;
     setIsLoading(true);
 
     try {
@@ -67,6 +61,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         .single();
 
       if (insertError) throw insertError;
+      if (!data) throw new Error('Nenhum dado retornado após inserção');
 
       const defaultColumns = [
         { name: 'Novos Leads', order: 1, color: 'blue', client_id: data.id },
@@ -78,16 +73,11 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
       const { error: columnsError } = await supabase.from('columns').insert(defaultColumns);
       if (columnsError) throw columnsError;
 
-      // Show success message immediately
       toast({
-        title: 'Cliente cadastrado com sucesso',
-        description: 'O cliente foi adicionado e as colunas padrão foram criadas.',
+        title: "Cliente cadastrado com sucesso",
+        description: "O cliente foi adicionado e as colunas padrão foram criadas."
       });
 
-      // Update client list
-      onClientAdded();
-
-      // Reset form
       setFormData({
         name: '',
         email: '',
@@ -101,21 +91,26 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         monthly_fee: '0.00'
       });
 
-      // Close modal with small delay to ensure toast is visible
+      onClientAdded();
       setTimeout(() => {
         onClose();
-      }, 100);
-
+      }, 300);
     } catch (error: any) {
       console.error('Erro ao cadastrar cliente:', JSON.stringify(error, null, 2));
       toast({
-        variant: 'destructive',
-        title: 'Erro ao cadastrar',
-        description: error.message || 'Não foi possível cadastrar o cliente.',
+        variant: "destructive",
+        title: "Erro ao cadastrar",
+        description: error.message || "Não foi possível cadastrar o cliente."
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const formatCurrency = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    const floatValue = parseFloat(numericValue) / 100;
+    return floatValue.toFixed(2);
   };
 
   return (
@@ -167,6 +162,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
               </div>
             </div>
           </div>
+
           <div className="flex-shrink-0 border-t bg-white px-6 py-4">
             <div className="flex justify-end space-x-2">
               <Button variant="ghost" onClick={onClose} type="button" disabled={isLoading}>Cancelar</Button>
