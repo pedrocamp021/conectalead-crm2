@@ -11,6 +11,7 @@ import { AdminKanban } from './components/admin/AdminKanban';
 import { AdminAutomacao } from './components/admin/AdminAutomacao';
 import { AdminPrevisao } from './components/admin/AdminPrevisao';
 import { AdminPagamentos } from './components/admin/AdminPagamentos';
+import { AdminConfiguracao } from './components/admin/AdminConfiguracao';
 import { useAppStore } from './lib/store';
 import { supabase } from './lib/supabase';
 
@@ -58,6 +59,7 @@ function App() {
           <Route path="/admin/billing" element={<AdminAutomacao />} />
           <Route path="/admin/forecast" element={<AdminPrevisao />} />
           <Route path="/admin/payments" element={<AdminPagamentos />} />
+          <Route path="/admin/config" element={<AdminConfiguracao />} />
         </Route>
         
         <Route path="/404" element={<NotFound />} />
