@@ -102,7 +102,7 @@ export const AdminClientes: React.FC = () => {
       setIsEditModalOpen(false);
       fetchClients();
     } catch (error) {
-      console.error('Erro ao atualizar cliente:', error);
+      console.error('Error saving changes:', error);
       toast({
         variant: "destructive",
         title: "Erro ao salvar",
@@ -481,7 +481,3 @@ export const AdminClientes: React.FC = () => {
     </div>
   );
 };
-
-export default AdminClientes;
-
-export { AdminClientes };
