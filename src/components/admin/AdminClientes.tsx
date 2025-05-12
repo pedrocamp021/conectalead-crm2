@@ -14,13 +14,14 @@ interface EditClientForm {
   email: string;
   plan_type: string;
   status: string;
+  plan_expiry: string;
   billing_day: number;
   whatsapp: string;
   billing_message: string;
   billing_automation_enabled: boolean;
 }
 
-const AdminClientes: React.FC = () => {
+export const AdminClientes: React.FC = () => {
   const { toast } = useToast();
   const [clients, setClients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -63,6 +64,7 @@ const AdminClientes: React.FC = () => {
       email: client.email,
       plan_type: client.plan_type,
       status: client.status,
+      plan_expiry: client.plan_expiry || new Date().toISOString().split('T')[0],
       billing_day: client.billing_day || 1,
       whatsapp: client.whatsapp || '',
       billing_message: client.billing_message || '',
@@ -82,6 +84,7 @@ const AdminClientes: React.FC = () => {
           email: editingClient.email,
           plan_type: editingClient.plan_type,
           status: editingClient.status,
+          plan_expiry: editingClient.plan_expiry,
           billing_day: editingClient.billing_day,
           whatsapp: editingClient.whatsapp,
           billing_message: editingClient.billing_message,
@@ -109,8 +112,7 @@ const AdminClientes: React.FC = () => {
   };
 
   const handleToggleStatus = async (client: any) => {
-    const newStatus = client.status === 'ativo' ? 'inativo' : 'ativo';
-
+    const newStatus = client.status?.toLowerCase() === 'ativo' ? 'inativo' : 'ativo';
     try {
       const { error } = await supabase
         .from('clients')
@@ -120,50 +122,34 @@ const AdminClientes: React.FC = () => {
       if (error) throw error;
 
       toast({
-        title: "Status atualizado",
-        description: `Cliente marcado como ${newStatus}.`,
+        title: 'Status atualizado',
+        description: `Cliente marcado como ${newStatus}.`
       });
-
       fetchClients();
-    } catch (error) {
-      console.error('Erro ao atualizar status:', error);
+    } catch (err) {
       toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível alterar o status do cliente.",
+        variant: 'destructive',
+        title: 'Erro ao atualizar status',
+        description: 'Tente novamente.'
       });
     }
   };
 
   const handleDeleteClient = async (client: any) => {
-    const confirmed = window.confirm(
-      "ATENÇÃO: Esta ação irá excluir permanentemente o cliente e todos os seus dados. Esta ação não pode ser desfeita. Digite CONFIRMAR para prosseguir."
-    );
-
-    if (!confirmed || prompt("Digite CONFIRMAR para excluir permanentemente") !== "CONFIRMAR") {
-      return;
-    }
+    const confirmed = confirm("Tem certeza que deseja excluir este cliente?");
+    if (!confirmed) return;
 
     try {
-      const { error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', client.id);
-
+      const { error } = await supabase.from('clients').delete().eq('id', client.id);
       if (error) throw error;
 
-      toast({
-        title: "Cliente excluído",
-        description: "O cliente foi removido permanentemente.",
-      });
-
+      toast({ title: 'Cliente excluído', description: 'Cliente removido com sucesso.' });
       fetchClients();
-    } catch (error) {
-      console.error('Erro ao excluir cliente:', error);
+    } catch (err) {
       toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível excluir o cliente.",
+        variant: 'destructive',
+        title: 'Erro ao excluir',
+        description: 'Tente novamente.'
       });
     }
   };
@@ -304,7 +290,7 @@ const AdminClientes: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center text-sm text-gray-900">
                     <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                    Dia {client.billing_day || '-'}
+                    {new Date(client.plan_expiry).toLocaleDateString()}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -328,11 +314,11 @@ const AdminClientes: React.FC = () => {
                       Editar
                     </Button>
                     <Button
-                      variant={client.status === 'ativo' ? 'danger' : 'primary'}
+                      variant={client.status?.toLowerCase() === 'ativo' ? 'danger' : 'primary'}
                       size="sm"
                       onClick={() => handleToggleStatus(client)}
                     >
-                      {client.status === 'ativo' ? 'Inativar' : 'Ativar'}
+                      {client.status?.toLowerCase() === 'ativo' ? 'Inativar' : 'Ativar'}
                     </Button>
                     <Button
                       variant="danger"
@@ -357,113 +343,118 @@ const AdminClientes: React.FC = () => {
           </DialogHeader>
           
           {editingClient && (
-            <div className="flex-1 overflow-y-auto px-1 -mx-1">
-              <div className="space-y-4 py-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Nome"
-                    value={editingClient.name}
-                    onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
-                  />
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="Nome"
+                  value={editingClient.name}
+                  onChange={(e) => setEditingClient({ ...editingClient, name: e.target.value })}
+                />
 
-                  <Input
-                    label="Email"
-                    type="email"
-                    value={editingClient.email}
-                    onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
-                  />
-                </div>
+                <Input
+                  label="Email"
+                  type="email"
+                  value={editingClient.email}
+                  onChange={(e) => setEditingClient({ ...editingClient, email: e.target.value })}
+                />
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="WhatsApp"
-                    type="tel"
-                    value={editingClient.whatsapp}
-                    onChange={(e) => setEditingClient({ ...editingClient, whatsapp: e.target.value })}
-                    placeholder="+5511999999999"
-                  />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input
+                  label="WhatsApp"
+                  type="tel"
+                  value={editingClient.whatsapp}
+                  onChange={(e) => setEditingClient({ ...editingClient, whatsapp: e.target.value })}
+                  placeholder="+5511999999999"
+                />
 
-                  <Input
-                    label="Dia do Vencimento"
-                    type="number"
-                    min="1"
-                    max="31"
-                    value={editingClient.billing_day}
-                    onChange={(e) => setEditingClient({ 
-                      ...editingClient, 
-                      billing_day: parseInt(e.target.value) 
-                    })}
-                  />
-                </div>
+                <Input
+                  label="Dia do Vencimento"
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={editingClient.billing_day}
+                  onChange={(e) => setEditingClient({ 
+                    ...editingClient, 
+                    billing_day: parseInt(e.target.value) 
+                  })}
+                />
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Tipo de Plano
-                    </label>
-                    <select
-                      value={editingClient.plan_type}
-                      onChange={(e) => setEditingClient({ ...editingClient, plan_type: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="mensal">Mensal</option>
-                      <option value="trimestral">Trimestral</option>
-                      <option value="anual">Anual</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Status
-                    </label>
-                    <select
-                      value={editingClient.status}
-                      onChange={(e) => setEditingClient({ ...editingClient, status: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    >
-                      <option value="ativo">Ativo</option>
-                      <option value="inativo">Inativo</option>
-                      <option value="vencido">Vencido</option>
-                    </select>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Plano
+                  </label>
+                  <select
+                    value={editingClient.plan_type}
+                    onChange={(e) => setEditingClient({ ...editingClient, plan_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  >
+                    <option value="mensal">Mensal</option>
+                    <option value="trimestral">Trimestral</option>
+                    <option value="anual">Anual</option>
+                  </select>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mensagem de Cobrança
+                    Status
                   </label>
-                  <textarea
-                    value={editingClient.billing_message}
-                    onChange={(e) => setEditingClient({ 
-                      ...editingClient, 
-                      billing_message: e.target.value 
-                    })}
+                  <select
+                    value={editingClient.status}
+                    onChange={(e) => setEditingClient({ ...editingClient, status: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    rows={3}
-                    placeholder="Mensagem que será enviada nos avisos de cobrança..."
-                  />
+                  >
+                    <option value="ativo">Ativo</option>
+                    <option value="inativo">Inativo</option>
+                    <option value="vencido">Vencido</option>
+                  </select>
                 </div>
+              </div>
 
-                <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-md">
-                  <input
-                    type="checkbox"
-                    id="automation"
-                    checked={editingClient.billing_automation_enabled}
-                    onChange={(e) => setEditingClient({
-                      ...editingClient,
-                      billing_automation_enabled: e.target.checked
-                    })}
-                    className="h-4 w-4 text-blue-600 rounded"
-                  />
-                  <label htmlFor="automation" className="text-sm text-gray-700">
-                    Ativar automação de cobrança
-                  </label>
-                </div>
+              <Input
+                label="Data de Vencimento"
+                type="date"
+                value={editingClient.plan_expiry.split('T')[0]}
+                onChange={(e) => setEditingClient({ ...editingClient, plan_expiry: e.target.value })}
+              />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mensagem de Cobrança
+                </label>
+                <textarea
+                  value={editingClient.billing_message}
+                  onChange={(e) => setEditingClient({ 
+                    ...editingClient, 
+                    billing_message: e.target.value 
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                  rows={3}
+                  placeholder="Mensagem que será enviada nos avisos de cobrança..."
+                />
+              </div>
+
+              <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-md">
+                <input
+                  type="checkbox"
+                  id="automation"
+                  checked={editingClient.billing_automation_enabled}
+                  onChange={(e) => setEditingClient({
+                    ...editingClient,
+                    billing_automation_enabled: e.target.checked
+                  })}
+                  className="h-4 w-4 text-blue-600 rounded"
+                />
+                <label htmlFor="automation" className="text-sm text-gray-700">
+                  Ativar automação de cobrança
+                </label>
               </div>
             </div>
           )}
 
-          <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-gray-200 flex-shrink-0">
+          <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-gray-200">
             <Button
               variant="ghost"
               onClick={() => setIsEditModalOpen(false)}
@@ -482,6 +473,7 @@ const AdminClientes: React.FC = () => {
       </Dialog>
 
       <AddClientModal
+        key={isAddModalOpen ? 'open' : 'closed'}
         open={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onClientAdded={fetchClients}
