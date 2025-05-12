@@ -4,8 +4,8 @@ import { useAppStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Save, Upload, Loader2 } from 'lucide-react';
-import { useToast } from '../components/ui/use-toast';
+import { Save, Loader2 } from 'lucide-react';
+import { useToast } from '../ui/use-toast';
 
 export const Profile: React.FC = () => {
   const { client, user } = useAppStore();
@@ -13,22 +13,16 @@ export const Profile: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    email: '',
-    logo_url: ''
+    email: ''
   });
   const [hasChanges, setHasChanges] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (client) {
       setFormData({
         name: client.name,
-        email: client.email,
-        logo_url: client.logo_url || ''
+        email: client.email
       });
-      if (client.logo_url) {
-        setPreviewUrl(client.logo_url);
-      }
     }
   }, [client]);
 
@@ -36,54 +30,13 @@ export const Profile: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setPreviewUrl(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    try {
-      // Upload to Supabase Storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${client.id}-${Date.now()}.${fileExt}`;
-      const { data, error } = await supabase.storage
-        .from('logos')
-        .upload(fileName, file);
-
-      if (error) throw error;
-
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('logos')
-        .getPublicUrl(fileName);
-
-      setFormData(prev => ({ ...prev, logo_url: publicUrl }));
-      setHasChanges(true);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível fazer upload da imagem.",
-      });
-    }
-  };
-
   const handleSave = async () => {
     setIsLoading(true);
 
     try {
       const { error } = await supabase
         .from('clients')
-        .update({
-          name: formData.name,
-          logo_url: formData.logo_url
-        })
+        .update({ name: formData.name })
         .eq('id', client.id);
 
       if (error) throw error;
@@ -112,7 +65,7 @@ export const Profile: React.FC = () => {
 
       toast({
         title: "Email enviado",
-        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+        description: "Enviamos um link para redefinição de senha para seu e-mail.",
       });
     } catch (error) {
       console.error('Error resetting password:', error);
@@ -156,40 +109,6 @@ export const Profile: React.FC = () => {
                 disabled
                 className="bg-gray-50"
               />
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Logo da Empresa
-                </label>
-                <div className="flex items-center space-x-4">
-                  {previewUrl && (
-                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100">
-                      <img
-                        src={previewUrl}
-                        alt="Logo Preview"
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                  )}
-                  <div>
-                    <label className="cursor-pointer">
-                      <div className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center">
-                        <Upload className="h-4 w-4 mr-2" />
-                        <span>Upload Logo</span>
-                      </div>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleImageChange}
-                      />
-                    </label>
-                    <p className="mt-1 text-xs text-gray-500">
-                      PNG, JPG até 2MB
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
 
             <div className="mt-6 flex justify-end">
