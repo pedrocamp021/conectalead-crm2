@@ -28,7 +28,9 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     billing_day: 1,
     billing_message: '',
     billing_automation_enabled: false,
-    password: '12345678' // Senha temporária
+    initial_fee: '0.00',
+    monthly_fee: '0.00',
+    password: '12345678'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -36,7 +38,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     setIsLoading(true);
 
     try {
-      // 1. Criar usuário no Auth
+      // 1. Create auth user
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: formData.email,
         password: formData.password,
@@ -44,9 +46,9 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
       });
 
       if (authError) throw authError;
-      if (!authData.user) throw new Error('Falha ao criar usuário');
+      if (!authData.user) throw new Error('Failed to create user');
 
-      // 2. Criar registro na tabela clients
+      // 2. Create client record
       const { error: clientError } = await supabase
         .from('clients')
         .insert([{
@@ -58,12 +60,14 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
           status: formData.status,
           billing_day: formData.billing_day,
           billing_message: formData.billing_message,
-          billing_automation_enabled: formData.billing_automation_enabled
+          billing_automation_enabled: formData.billing_automation_enabled,
+          initial_fee: parseFloat(formData.initial_fee),
+          monthly_fee: parseFloat(formData.monthly_fee)
         }]);
 
       if (clientError) throw clientError;
 
-      // 3. Criar colunas padrão do Kanban
+      // 3. Create default columns
       const defaultColumns = [
         { name: 'Novos Leads', order: 1, color: 'blue', client_id: authData.user.id },
         { name: 'Em Contato', order: 2, color: 'yellow', client_id: authData.user.id },
@@ -77,7 +81,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
       if (columnsError) throw columnsError;
 
-      // 4. Enviar email de redefinição de senha
+      // 4. Send password reset email
       await supabase.auth.resetPasswordForEmail(formData.email);
 
       toast({
@@ -97,6 +101,12 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const formatCurrency = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    const floatValue = parseFloat(numericValue) / 100;
+    return floatValue.toFixed(2);
   };
 
   return (
@@ -178,6 +188,30 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
                 <option value="inativo">Inativo</option>
               </select>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Valor da Primeira Mensalidade (R$)"
+              type="text"
+              value={formData.initial_fee}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                initial_fee: formatCurrency(e.target.value)
+              })}
+              required
+            />
+
+            <Input
+              label="Valor da Mensalidade Recorrente (R$)"
+              type="text"
+              value={formData.monthly_fee}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                monthly_fee: formatCurrency(e.target.value)
+              })}
+              required
+            />
           </div>
 
           <div>

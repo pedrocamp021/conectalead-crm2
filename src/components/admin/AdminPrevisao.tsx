@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../ui/use-toast';
 import { Button } from '../ui/Button';
-import { Calendar, Filter, Download, Loader2, AlertCircle } from 'lucide-react';
+import { Calendar, Filter, Download, Loader2, AlertCircle, DollarSign } from 'lucide-react';
 
 interface Client {
   id: string;
@@ -10,11 +10,13 @@ interface Client {
   plan_type: string;
   billing_day: number;
   status: string;
+  monthly_fee: number;
 }
 
 interface BillingGroup {
   day: number;
   clients: Client[];
+  totalAmount: number;
 }
 
 export const AdminPrevisao: React.FC = () => {
@@ -61,37 +63,58 @@ export const AdminPrevisao: React.FC = () => {
   const nextMonth = new Date(today.getFullYear(), currentMonth + 1, 1);
 
   const groupClientsByDay = (clients: Client[]): BillingGroup[] => {
-    const groups: { [key: number]: Client[] } = {};
+    const groups: { [key: number]: { clients: Client[], totalAmount: number } } = {};
     
     clients.forEach(client => {
       const day = client.billing_day || 1;
-      if (!groups[day]) groups[day] = [];
-      groups[day].push(client);
+      if (!groups[day]) {
+        groups[day] = { clients: [], totalAmount: 0 };
+      }
+      groups[day].clients.push(client);
+      groups[day].totalAmount += client.monthly_fee || 0;
     });
 
     return Object.entries(groups)
-      .map(([day, clients]) => ({
+      .map(([day, data]) => ({
         day: parseInt(day),
-        clients
+        clients: data.clients,
+        totalAmount: data.totalAmount
       }))
       .sort((a, b) => a.day - b.day);
   };
 
-  const dueTodayCount = filteredClients.filter(c => c.billing_day === currentDay).length;
-  const dueThisMonthCount = filteredClients.length;
-  const dueNextMonthCount = filteredClients.length;
-  const next7DaysClients = filteredClients.filter(c => {
-    const daysUntilDue = c.billing_day - currentDay;
-    return daysUntilDue >= 0 && daysUntilDue <= 7;
-  });
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const dueTodayAmount = filteredClients
+    .filter(c => c.billing_day === currentDay)
+    .reduce((sum, client) => sum + (client.monthly_fee || 0), 0);
+
+  const dueThisMonthAmount = filteredClients
+    .reduce((sum, client) => sum + (client.monthly_fee || 0), 0);
+
+  const dueNextMonthAmount = filteredClients
+    .reduce((sum, client) => sum + (client.monthly_fee || 0), 0);
+
+  const next7DaysAmount = filteredClients
+    .filter(c => {
+      const daysUntilDue = c.billing_day - currentDay;
+      return daysUntilDue >= 0 && daysUntilDue <= 7;
+    })
+    .reduce((sum, client) => sum + (client.monthly_fee || 0), 0);
 
   const handleExportCSV = () => {
-    const headers = ['Nome', 'Plano', 'Dia do Vencimento', 'Status'];
+    const headers = ['Nome', 'Plano', 'Dia do Vencimento', 'Status', 'Valor'];
     const rows = filteredClients.map(client => [
       client.name,
       client.plan_type,
       client.billing_day,
-      client.status
+      client.status,
+      formatCurrency(client.monthly_fee || 0)
     ]);
 
     const csvContent = [
@@ -163,9 +186,11 @@ export const AdminPrevisao: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Vencimentos Hoje</p>
-              <h3 className="text-2xl font-bold text-gray-900">{dueTodayCount}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">
+                {formatCurrency(dueTodayAmount)}
+              </h3>
             </div>
-            <Calendar className="h-8 w-8 text-blue-500" />
+            <DollarSign className="h-8 w-8 text-blue-500" />
           </div>
         </div>
 
@@ -173,9 +198,11 @@ export const AdminPrevisao: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Próximos 7 dias</p>
-              <h3 className="text-2xl font-bold text-gray-900">{next7DaysClients.length}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">
+                {formatCurrency(next7DaysAmount)}
+              </h3>
             </div>
-            <Calendar className="h-8 w-8 text-green-500" />
+            <DollarSign className="h-8 w-8 text-green-500" />
           </div>
         </div>
 
@@ -183,9 +210,11 @@ export const AdminPrevisao: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Total este mês</p>
-              <h3 className="text-2xl font-bold text-gray-900">{dueThisMonthCount}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">
+                {formatCurrency(dueThisMonthAmount)}
+              </h3>
             </div>
-            <Calendar className="h-8 w-8 text-purple-500" />
+            <DollarSign className="h-8 w-8 text-purple-500" />
           </div>
         </div>
 
@@ -193,9 +222,11 @@ export const AdminPrevisao: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">Previsão próximo mês</p>
-              <h3 className="text-2xl font-bold text-gray-900">{dueNextMonthCount}</h3>
+              <h3 className="text-2xl font-bold text-gray-900">
+                {formatCurrency(dueNextMonthAmount)}
+              </h3>
             </div>
-            <Calendar className="h-8 w-8 text-orange-500" />
+            <DollarSign className="h-8 w-8 text-orange-500" />
           </div>
         </div>
       </div>
@@ -221,9 +252,14 @@ export const AdminPrevisao: React.FC = () => {
                     Dia {group.day}
                   </h4>
                 </div>
-                <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
-                  {group.clients.length} clientes
-                </span>
+                <div className="flex items-center space-x-4">
+                  <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                    {group.clients.length} clientes
+                  </span>
+                  <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
+                    {formatCurrency(group.totalAmount)}
+                  </span>
+                </div>
               </div>
 
               <div className="space-y-3">
@@ -236,6 +272,11 @@ export const AdminPrevisao: React.FC = () => {
                       <p className="font-medium text-gray-900">{client.name}</p>
                       <p className="text-sm text-gray-500">
                         Plano {client.plan_type} • Status: {client.status}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">
+                        {formatCurrency(client.monthly_fee || 0)}
                       </p>
                     </div>
                   </div>
