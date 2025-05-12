@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { useAppStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Upload, Loader2 } from 'lucide-react';
 import { useToast } from '../components/ui/use-toast';
 
 export const Profile: React.FC = () => {
@@ -13,36 +14,76 @@ export const Profile: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    whatsapp: '',
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    logo_url: ''
   });
+  const [hasChanges, setHasChanges] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (client) {
-      setFormData(prev => ({
-        ...prev,
+      setFormData({
         name: client.name,
         email: client.email,
-        whatsapp: client.whatsapp || ''
-      }));
+        logo_url: client.logo_url || ''
+      });
+      if (client.logo_url) {
+        setPreviewUrl(client.logo_url);
+      }
     }
   }, [client]);
 
+  if (!user || !client) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+
+    try {
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${client.id}-${Date.now()}.${fileExt}`;
+      const { data, error } = await supabase.storage
+        .from('logos')
+        .upload(fileName, file);
+
+      if (error) throw error;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('logos')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, logo_url: publicUrl }));
+      setHasChanges(true);
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível fazer upload da imagem.",
+      });
+    }
+  };
+
   const handleSave = async () => {
-    if (!client) return;
     setIsLoading(true);
 
     try {
-      const updates = {
-        name: formData.name,
-        whatsapp: formData.whatsapp
-      };
-
       const { error } = await supabase
         .from('clients')
-        .update(updates)
+        .update({
+          name: formData.name,
+          logo_url: formData.logo_url
+        })
         .eq('id', client.id);
 
       if (error) throw error;
@@ -51,11 +92,12 @@ export const Profile: React.FC = () => {
         title: "Perfil atualizado",
         description: "Suas informações foram salvas com sucesso.",
       });
+      setHasChanges(false);
     } catch (error) {
-      console.error('Erro ao atualizar perfil:', error);
+      console.error('Error updating profile:', error);
       toast({
         variant: "destructive",
-        title: "Erro ao salvar",
+        title: "Erro",
         description: "Não foi possível atualizar seu perfil.",
       });
     } finally {
@@ -63,45 +105,22 @@ export const Profile: React.FC = () => {
     }
   };
 
-  const handlePasswordChange = async () => {
-    if (formData.newPassword !== formData.confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "As senhas não coincidem.",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-
+  const handleResetPassword = async () => {
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: formData.newPassword
-      });
-
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email);
       if (error) throw error;
 
-      setFormData(prev => ({
-        ...prev,
-        currentPassword: '',
-        newPassword: '',
-        confirmPassword: ''
-      }));
-
       toast({
-        title: "Senha atualizada",
-        description: "Sua senha foi alterada com sucesso.",
+        title: "Email enviado",
+        description: "Verifique sua caixa de entrada para redefinir sua senha.",
       });
     } catch (error) {
-      console.error('Erro ao atualizar senha:', error);
+      console.error('Error resetting password:', error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível alterar sua senha.",
+        description: "Não foi possível enviar o email de redefinição.",
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -112,74 +131,99 @@ export const Profile: React.FC = () => {
         <p className="text-gray-600">Gerencie suas informações pessoais</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Input
-              label="Nome da Empresa"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-            />
-
-            <Input
-              label="Email"
-              type="email"
-              value={formData.email}
-              disabled
-              className="bg-gray-50"
-            />
-
-            <Input
-              label="WhatsApp"
-              type="tel"
-              value={formData.whatsapp}
-              onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-              placeholder="+5511999999999"
-            />
-          </div>
-
-          <div className="flex justify-end">
-            <Button
-              variant="primary"
-              onClick={handleSave}
-              disabled={isLoading}
-              icon={isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            >
-              Salvar Alterações
-            </Button>
-          </div>
-        </div>
-
-        <div className="border-t border-gray-200">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Informações da Conta */}
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">
-              Alterar Senha
+              Informações da Conta
             </h2>
 
             <div className="space-y-4">
               <Input
-                label="Nova Senha"
-                type="password"
-                value={formData.newPassword}
-                onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                label="Nome da Empresa"
+                value={formData.name}
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value });
+                  setHasChanges(true);
+                }}
               />
 
               <Input
-                label="Confirmar Nova Senha"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                label="Email"
+                type="email"
+                value={formData.email}
+                disabled
+                className="bg-gray-50"
               />
 
-              <div className="flex justify-end">
-                <Button
-                  variant="primary"
-                  onClick={handlePasswordChange}
-                  disabled={isLoading || !formData.newPassword || !formData.confirmPassword}
-                >
-                  Alterar Senha
-                </Button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Logo da Empresa
+                </label>
+                <div className="flex items-center space-x-4">
+                  {previewUrl && (
+                    <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100">
+                      <img
+                        src={previewUrl}
+                        alt="Logo Preview"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="cursor-pointer">
+                      <div className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 flex items-center">
+                        <Upload className="h-4 w-4 mr-2" />
+                        <span>Upload Logo</span>
+                      </div>
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                      />
+                    </label>
+                    <p className="mt-1 text-xs text-gray-500">
+                      PNG, JPG até 2MB
+                    </p>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <Button
+                variant="primary"
+                onClick={handleSave}
+                disabled={!hasChanges || isLoading}
+                icon={isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              >
+                {isLoading ? 'Salvando...' : 'Salvar Alterações'}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Segurança */}
+        <div className="bg-white rounded-lg shadow-sm">
+          <div className="p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              Segurança
+            </h2>
+
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600">
+                Para alterar sua senha, clique no botão abaixo. Você receberá um email com instruções para criar uma nova senha.
+              </p>
+
+              <Button
+                variant="outline"
+                onClick={handleResetPassword}
+                fullWidth
+              >
+                Alterar Senha
+              </Button>
             </div>
           </div>
         </div>

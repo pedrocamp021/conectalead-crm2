@@ -12,6 +12,8 @@ export interface Client {
   expiration_date: string;
   status: string;
   user_id: string;
+  logo_url?: string;
+  whatsapp?: string;
 }
 
 export interface Column {
@@ -21,13 +23,6 @@ export interface Column {
   client_id: string;
   color: string;
   leads?: Lead[];
-}
-
-export interface Label {
-  id: string;
-  name: string;
-  color: string;
-  client_id: string;
 }
 
 export interface Lead {
@@ -41,6 +36,13 @@ export interface Lead {
   created_at: string;
   has_followup?: boolean;
   labels?: Label[];
+}
+
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+  client_id: string;
 }
 
 export interface Followup {
