@@ -1,7 +1,7 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAppStore } from '../lib/store';
-import { ClientList } from '../components/admin/ClientList';
+import { AdminClientes } from '../components/admin/AdminClientes';
 
 export const Admin: React.FC = () => {
   const { isAdmin } = useAppStore();
@@ -12,8 +12,8 @@ export const Admin: React.FC = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Client Management</h2>
-      <ClientList />
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Gestão de Clientes</h2>
+      <AdminClientes />
     </div>
   );
 };
