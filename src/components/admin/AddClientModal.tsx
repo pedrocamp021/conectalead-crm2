@@ -111,15 +111,15 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="flex flex-col max-h-[90vh] overflow-hidden">
         {/* Fixed Header */}
-        <DialogHeader className="flex-shrink-0 border-b py-4">
-          <DialogTitle className="px-6">Cadastrar Novo Cliente</DialogTitle>
+        <DialogHeader className="flex-shrink-0 py-4 px-6 border-b">
+          <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1">
           {/* Scrollable Content */}
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="flex-1 overflow-y-auto px-6 py-4">
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
@@ -250,29 +250,31 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
           </div>
 
           {/* Fixed Footer */}
-          <div className="flex-shrink-0 border-t p-6 bg-white flex justify-end space-x-2">
-            <Button
-              variant="ghost"
-              onClick={onClose}
-              type="button"
-              disabled={isLoading}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Cadastrando...
-                </>
-              ) : (
-                'Cadastrar Cliente'
-              )}
-            </Button>
+          <div className="flex-shrink-0 border-t bg-white px-6 py-4">
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="ghost"
+                onClick={onClose}
+                type="button"
+                disabled={isLoading}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Cadastrando...
+                  </>
+                ) : (
+                  'Cadastrar Cliente'
+                )}
+              </Button>
+            </div>
           </div>
         </form>
       </DialogContent>
