@@ -78,6 +78,9 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         description: "O cliente foi adicionado e as colunas padrão foram criadas."
       });
 
+      onClientAdded();
+      onClose();
+
       setFormData({
         name: '',
         email: '',
@@ -90,11 +93,6 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         initial_fee: '0.00',
         monthly_fee: '0.00'
       });
-
-      onClientAdded();
-      setTimeout(() => {
-        onClose();
-      }, 300);
     } catch (error: any) {
       console.error('Erro ao cadastrar cliente:', JSON.stringify(error, null, 2));
       toast({
