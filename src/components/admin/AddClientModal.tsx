@@ -106,6 +106,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         monthly_fee: '0.00'
       });
 
+      // Call onClientAdded before closing
       onClientAdded();
       onClose();
     } catch (error: any) {
