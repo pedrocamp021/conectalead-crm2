@@ -131,44 +131,30 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ isLoadingData: true });
 
     try {
-      // Fetch columns
       let columnQuery = supabase.from('columns').select('*');
       if (!isAdmin) columnQuery = columnQuery.eq('client_id', targetClientId);
       columnQuery = columnQuery.order('order');
 
       const { data: columnsData, error: columnsError } = await columnQuery;
-
       if (columnsError) throw columnsError;
 
-      // Fetch leads with followup status
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
-        .select(`
-          *,
-          followups!inner (
-            id,
-            status
-          )
-        `)
+        .select(`*, followups!inner (id, status)`)  
         .eq('followups.status', 'scheduled');
-
       if (leadsError) throw leadsError;
 
-      // Get all leads
       const { data: allLeads, error: allLeadsError } = await supabase
         .from('leads')
         .select('*');
-
       if (allLeadsError) throw allLeadsError;
 
-      // Mark leads with scheduled followups
       const leadsWithFollowups = new Set(leadsData?.map(l => l.id) || []);
       const processedLeads = allLeads?.map(lead => ({
         ...lead,
         has_followup: leadsWithFollowups.has(lead.id)
       }));
 
-      // Organize leads by column
       const columns = columnsData?.map(column => ({
         ...column,
         leads: processedLeads?.filter(lead => lead.column_id === column.id)
@@ -237,3 +223,53 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       set({ leads: updatedLeads, columns: updatedColumns });
     }
+  },
+
+  updateLead: async (leadId, updates) => {
+    const { leads, columns } = get();
+
+    const { error } = await supabase
+      .from("leads")
+      .update(updates)
+      .eq("id", leadId);
+
+    if (error) {
+      console.error("❌ Erro ao atualizar lead:", error);
+      return;
+    }
+
+    const updatedLeads = leads.map((lead) =>
+      lead.id === leadId ? { ...lead, ...updates } : lead
+    );
+
+    const updatedColumns = columns.map((column) => ({
+      ...column,
+      leads: updatedLeads.filter((lead) => lead.column_id === column.id),
+    }));
+
+    set({ leads: updatedLeads, columns: updatedColumns });
+  },
+
+  deleteLead: async (leadId) => {
+    const { leads, columns } = get();
+
+    const { error } = await supabase
+      .from("leads")
+      .delete()
+      .eq("id", leadId);
+
+    if (error) {
+      console.error("❌ Erro ao deletar lead:", error);
+      return;
+    }
+
+    const updatedLeads = leads.filter((l) => l.id !== leadId);
+
+    const updatedColumns = columns.map((column) => ({
+      ...column,
+      leads: updatedLeads.filter((lead) => lead.column_id === column.id),
+    }));
+
+    set({ leads: updatedLeads, columns: updatedColumns });
+  },
+}));
