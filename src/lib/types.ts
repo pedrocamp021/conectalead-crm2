@@ -45,7 +45,11 @@ export interface Followup {
   leads?: {
     name: string;
     phone: string;
+    column_id?: string;
   };
+  columns?: Array<{
+    name: string;
+  }>;
 }
 
 export interface AuthState {
