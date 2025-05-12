@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { supabase } from './supabase';
 import type { AuthState, Client, Column, Lead } from './types';
+import { toast } from '../components/ui/use-toast';
 
 interface AppState extends AuthState {
   columns: Column[];
@@ -24,6 +25,7 @@ interface AppState extends AuthState {
   updateLead: (leadId: string, updates: Partial<Omit<Lead, 'id' | 'created_at'>>) => Promise<void>;
   deleteLead: (leadId: string) => Promise<void>;
   cancelFollowup: (followupId: string) => Promise<void>;
+  deleteFollowup: (followupId: string) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -270,6 +272,39 @@ export const useAppStore = create<AppState>((set, get) => ({
       await get().fetchColumnsAndLeads();
     } catch (error) {
       console.error('❌ Erro ao cancelar follow-up:', error);
+    }
+  },
+
+  deleteFollowup: async (followupId) => {
+    try {
+      const { error } = await supabase
+        .from('followups')
+        .delete()
+        .eq('id', followupId);
+
+      if (error) {
+        console.error('❌ Erro ao excluir follow-up:', error);
+        toast({
+          variant: "destructive",
+          title: "Erro ao excluir",
+          description: "Não foi possível excluir o agendamento.",
+        });
+        return;
+      }
+
+      toast({
+        title: "Agendamento excluído",
+        description: "Cancelado e removido com sucesso.",
+      });
+
+      await get().fetchColumnsAndLeads();
+    } catch (error) {
+      console.error('❌ Erro inesperado ao excluir follow-up:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro inesperado",
+        description: "Houve um problema ao excluir o agendamento.",
+      });
     }
   }
 }));
