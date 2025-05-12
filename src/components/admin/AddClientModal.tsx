@@ -26,7 +26,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     cnpj: '',
     plan_type: 'mensal',
     status: 'ativo',
-    billing_day: 1,
+    expiration_date: '',
     billing_message: '',
     billing_automation_enabled: false,
     initial_fee: '0.00',
@@ -37,7 +37,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     e.preventDefault();
 
     // Validate required fields
-    if (!formData.name || !formData.email || !formData.phone) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.expiration_date) {
       toast({
         variant: "destructive",
         title: "Campos obrigatórios",
@@ -72,7 +72,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
           whatsapp: formData.phone,
           plan_type: formData.plan_type,
           status: formData.status,
-          billing_day: formData.billing_day,
+          expiration_date: formData.expiration_date,
           billing_message: formData.billing_message,
           billing_automation_enabled: formData.billing_automation_enabled,
           initial_fee: parseFloat(formData.initial_fee),
@@ -112,7 +112,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         cnpj: '',
         plan_type: 'mensal',
         status: 'ativo',
-        billing_day: 1,
+        expiration_date: '',
         billing_message: '',
         billing_automation_enabled: false,
         initial_fee: '0.00',
@@ -240,15 +240,10 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
           </div>
 
           <Input
-            label="Dia do Vencimento"
-            type="number"
-            min="1"
-            max="31"
-            value={formData.billing_day}
-            onChange={(e) => setFormData({ 
-              ...formData, 
-              billing_day: parseInt(e.target.value) 
-            })}
+            label="Data de Vencimento *"
+            type="date"
+            value={formData.expiration_date}
+            onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
             required
           />
 
