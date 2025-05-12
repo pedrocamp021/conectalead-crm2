@@ -18,7 +18,7 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({ stats, isLoa
 
   const cards = [
     {
-      title: 'Total Clients',
+      title: 'Total de Clientes',
       value: stats.totalClients,
       icon: <Users className="h-8 w-8" />,
       bgColor: 'bg-blue-500',
@@ -26,7 +26,7 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({ stats, isLoa
       bgLight: 'bg-blue-50'
     },
     {
-      title: 'Active Clients',
+      title: 'Clientes Ativos',
       value: stats.activeClients,
       icon: <UserCheck className="h-8 w-8" />,
       bgColor: 'bg-green-500',
@@ -34,7 +34,7 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({ stats, isLoa
       bgLight: 'bg-green-50'
     },
     {
-      title: 'Inactive Clients',
+      title: 'Clientes Inativos',
       value: stats.inactiveClients,
       icon: <UserX className="h-8 w-8" />,
       bgColor: 'bg-yellow-500',
@@ -42,7 +42,7 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({ stats, isLoa
       bgLight: 'bg-yellow-50'
     },
     {
-      title: 'Expired Plans',
+      title: 'Planos Expirados',
       value: stats.expiredClients,
       icon: <Clock className="h-8 w-8" />,
       bgColor: 'bg-red-500',
@@ -71,7 +71,7 @@ export const DashboardMetrics: React.FC<DashboardMetricsProps> = ({ stats, isLoa
               <div className="text-3xl font-bold text-gray-900">
                 {card.value}
               </div>
-              <div className="ml-2 text-sm text-gray-500">clients</div>
+              <div className="ml-2 text-sm text-gray-500">clientes</div>
             </div>
           </div>
         </div>

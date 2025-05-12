@@ -17,21 +17,21 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ stats, isLoadi
   }
 
   const statusData: ClientStatusData[] = [
-    { name: 'Active', value: stats.activeClients, color: '#22c55e' },
-    { name: 'Inactive', value: stats.inactiveClients, color: '#eab308' },
-    { name: 'Expired', value: stats.expiredClients, color: '#ef4444' },
+    { name: 'Ativo', value: stats.activeClients, color: '#22c55e' },
+    { name: 'Inativo', value: stats.inactiveClients, color: '#eab308' },
+    { name: 'Expirado', value: stats.expiredClients, color: '#ef4444' },
   ];
 
   const planData: PlanDistributionData[] = [
-    { name: 'Monthly', value: stats.planDistribution.monthly },
-    { name: 'Quarterly', value: stats.planDistribution.quarterly },
-    { name: 'Yearly', value: stats.planDistribution.yearly },
+    { name: 'Mensal', value: stats.planDistribution.monthly },
+    { name: 'Trimestral', value: stats.planDistribution.quarterly },
+    { name: 'Anual', value: stats.planDistribution.yearly },
   ];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
       <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Client Status Distribution</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Distribuição de Status dos Clientes</h3>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -57,7 +57,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ stats, isLoadi
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Clients by Plan Type</h3>
+        <h3 className="text-lg font-semibold text-gray-800 mb-4">Clientes por Tipo de Plano</h3>
         <div className="h-[300px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={planData}>
@@ -66,7 +66,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ stats, isLoadi
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="value" name="Clients" fill="#3b82f6" />
+              <Bar dataKey="value" name="Clientes" fill="#3b82f6" />
             </BarChart>
           </ResponsiveContainer>
         </div>

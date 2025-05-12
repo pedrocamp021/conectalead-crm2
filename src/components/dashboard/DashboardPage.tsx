@@ -29,7 +29,6 @@ export const DashboardPage: React.FC = () => {
 
         const currentDate = new Date();
         
-        // Calculate client stats
         const stats = {
           totalClients: clients.length,
           activeClients: clients.filter(client => client.status === 'active').length,
@@ -44,7 +43,7 @@ export const DashboardPage: React.FC = () => {
 
         setStats(stats);
       } catch (error) {
-        console.error('Error fetching dashboard data:', error);
+        console.error('Erro ao buscar dados do dashboard:', error);
       } finally {
         setIsLoading(false);
       }
@@ -56,7 +55,7 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-bold text-gray-800 mb-6">Dashboard Overview</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-6">Visão Geral do Dashboard</h2>
         <DashboardMetrics stats={stats} isLoading={isLoading} />
       </div>
       <DashboardCharts stats={stats} isLoading={isLoading} />

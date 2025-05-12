@@ -13,8 +13,8 @@ export const Dashboard: React.FC = () => {
       ) : (
         <>
           <div className="mb-4">
-            <h1 className="text-2xl font-bold text-gray-800">Lead Management</h1>
-            <p className="text-gray-600">Manage your leads by dragging cards between columns</p>
+            <h1 className="text-2xl font-bold text-gray-800">Gestão de Leads</h1>
+            <p className="text-gray-600">Gerencie seus leads arrastando os cartões entre as colunas</p>
           </div>
           <KanbanBoard />
         </>
