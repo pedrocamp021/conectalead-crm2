@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { BulkScheduleModal } from '../components/followup/BulkScheduleModal';
+import { useToast } from '../components/ui/use-toast';
 import { 
   Loader2, Plus, Calendar, MessageSquare, Clock, Edit, 
   Trash2, CheckCircle, XCircle, Users, Search, Filter 
@@ -26,6 +27,7 @@ interface FollowupWithLead extends Followup {
 }
 
 export const Followups: React.FC = () => {
+  const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const selectedLeadId = searchParams.get('lead');
   const { client } = useAppStore();
@@ -128,9 +130,18 @@ export const Followups: React.FC = () => {
 
       await fetchFollowups();
       setEditingFollowup(null);
+      
+      toast({
+        title: "Mensagem atualizada",
+        description: "As alterações foram salvas com sucesso.",
+      });
     } catch (error) {
       console.error('Erro ao atualizar follow-up:', error);
-      alert('Erro ao salvar alterações. Por favor, tente novamente.');
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: "Não foi possível atualizar a mensagem. Tente novamente.",
+      });
     }
   };
 
@@ -145,10 +156,20 @@ export const Followups: React.FC = () => {
         .eq('id', followupId);
 
       if (error) throw error;
+      
       await fetchFollowups();
+      
+      toast({
+        title: "Mensagem cancelada",
+        description: "A mensagem foi cancelada com sucesso.",
+      });
     } catch (error) {
       console.error('Erro ao cancelar follow-up:', error);
-      alert('Erro ao cancelar. Tente novamente.');
+      toast({
+        variant: "destructive",
+        title: "Erro ao cancelar",
+        description: "Não foi possível cancelar a mensagem. Tente novamente.",
+      });
     }
   };
 
@@ -169,10 +190,20 @@ export const Followups: React.FC = () => {
         .insert(followups);
 
       if (error) throw error;
+      
       await fetchFollowups();
+      
+      toast({
+        title: "Mensagens agendadas",
+        description: `${leads.length} mensagens foram agendadas com sucesso.`,
+      });
     } catch (error) {
       console.error('Erro ao agendar mensagens em massa:', error);
-      alert('Erro ao agendar mensagens. Por favor, tente novamente.');
+      toast({
+        variant: "destructive",
+        title: "Erro ao agendar",
+        description: "Não foi possível agendar as mensagens. Tente novamente.",
+      });
     }
   };
 
