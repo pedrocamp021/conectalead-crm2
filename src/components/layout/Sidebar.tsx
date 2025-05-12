@@ -8,7 +8,9 @@ import {
   LogOut,
   X,
   MessageSquare,
-  Calendar
+  Calendar,
+  DollarSign,
+  CreditCard
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,8 +30,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       show: true,
     },
     {
-      name: 'Admin Panel',
-      path: '/admin',
+      name: 'Gestão de Clientes',
+      path: '/admin/clients',
       icon: <Users className="w-5 h-5" />,
       show: isAdmin,
     },
@@ -40,11 +42,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       show: !isAdmin,
     },
     {
-      name: 'Reports',
-      path: '/reports',
-      icon: <BarChart3 className="w-5 h-5" />,
-      show: false,
-    },
+      group: 'Financeiro',
+      show: isAdmin,
+      items: [
+        {
+          name: 'Previsão de Cobranças',
+          path: '/admin/forecast',
+          icon: <Calendar className="w-5 h-5" />,
+        },
+        {
+          name: 'Controle de Pagamentos',
+          path: '/admin/payments',
+          icon: <DollarSign className="w-5 h-5" />,
+        },
+        {
+          name: 'Automação de Cobrança',
+          path: '/admin/billing',
+          icon: <CreditCard className="w-5 h-5" />,
+        }
+      ]
+    }
   ];
 
   const handleOverlayClick = (e: React.MouseEvent) => {
@@ -79,23 +96,54 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         
         <div className="p-4">
           <nav className="space-y-1">
-            {navigationItems.filter(item => item.show).map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`
-                  flex items-center px-4 py-3 text-sm rounded-md transition-colors
-                  ${location.pathname === item.path
-                    ? 'bg-gray-700 text-white'
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                  }
-                `}
-                onClick={onClose}
-              >
-                <span className="mr-3">{item.icon}</span>
-                {item.name}
-              </Link>
-            ))}
+            {navigationItems.filter(item => item.show).map((item, index) => {
+              if ('group' in item) {
+                return (
+                  <div key={index} className="pt-4">
+                    <h3 className="px-4 text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+                      {item.group}
+                    </h3>
+                    <div className="space-y-1">
+                      {item.items.map((subItem, subIndex) => (
+                        <Link
+                          key={subIndex}
+                          to={subItem.path}
+                          className={`
+                            flex items-center px-4 py-3 text-sm rounded-md transition-colors
+                            ${location.pathname === subItem.path
+                              ? 'bg-gray-700 text-white'
+                              : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                            }
+                          `}
+                          onClick={onClose}
+                        >
+                          <span className="mr-3">{subItem.icon}</span>
+                          {subItem.name}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <Link
+                  key={index}
+                  to={item.path}
+                  className={`
+                    flex items-center px-4 py-3 text-sm rounded-md transition-colors
+                    ${location.pathname === item.path
+                      ? 'bg-gray-700 text-white'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                    }
+                  `}
+                  onClick={onClose}
+                >
+                  <span className="mr-3">{item.icon}</span>
+                  {item.name}
+                </Link>
+              );
+            })}
           </nav>
         </div>
         
@@ -108,7 +156,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             className="flex items-center w-full px-4 py-3 text-sm text-gray-300 rounded-md hover:bg-gray-700 hover:text-white transition-colors"
           >
             <LogOut className="w-5 h-5 mr-3" />
-            Logout
+            Sair
           </button>
         </div>
       </aside>
