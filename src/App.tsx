@@ -12,6 +12,7 @@ import { AdminAutomacao } from './components/admin/AdminAutomacao';
 import { AdminPrevisao } from './components/admin/AdminPrevisao';
 import { AdminPagamentos } from './components/admin/AdminPagamentos';
 import { AdminConfiguracao } from './components/admin/AdminConfiguracao';
+import { AdminRecorrencia } from './components/admin/AdminRecorrencia';
 import { useAppStore } from './lib/store';
 import { supabase } from './lib/supabase';
 
@@ -19,10 +20,8 @@ function App() {
   const { fetchUserData, setUser, setIsAdmin, setClient } = useAppStore();
 
   useEffect(() => {
-    // Initial fetch of user data
     fetchUserData();
 
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
@@ -35,7 +34,6 @@ function App() {
       }
     );
 
-    // Cleanup
     return () => {
       subscription.unsubscribe();
     };
@@ -60,6 +58,7 @@ function App() {
           <Route path="/admin/forecast" element={<AdminPrevisao />} />
           <Route path="/admin/payments" element={<AdminPagamentos />} />
           <Route path="/admin/config" element={<AdminConfiguracao />} />
+          <Route path="/admin/recurrence" element={<AdminRecorrencia />} />
         </Route>
         
         <Route path="/404" element={<NotFound />} />

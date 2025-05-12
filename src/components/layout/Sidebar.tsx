@@ -3,7 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../lib/store';
 import { 
   LayoutDashboard, Users, LogOut, X, MessageSquare, Calendar, 
-  DollarSign, CreditCard, Kanban as LayoutKanban, Settings 
+  DollarSign, CreditCard, Kanban as LayoutKanban, Settings,
+  BarChart
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -62,6 +63,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           name: 'Automação de Cobrança',
           path: '/admin/billing',
           icon: <CreditCard className="w-5 h-5" />,
+        },
+        {
+          name: 'Relatório de Recorrência',
+          path: '/admin/recurrence',
+          icon: <BarChart className="w-5 h-5" />,
         },
         {
           name: 'Configuração Geral',
