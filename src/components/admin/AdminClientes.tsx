@@ -6,7 +6,7 @@ import { Button } from '../ui/Button';
 import { useToast } from '../ui/use-toast';
 import { 
   Search, Edit, Trash2, User, Calendar, CheckCircle, XCircle,
-  Clock, Filter, WhatsappIcon, MessageSquare, BellRing
+  Clock, Filter, Whatsapp, MessageSquare, BellRing
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
@@ -296,7 +296,7 @@ export const AdminClientes: React.FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap">
                   {client.whatsapp ? (
                     <div className="flex items-center text-sm text-gray-900">
-                      <WhatsappIcon className="h-4 w-4 text-green-500 mr-1" />
+                      <Whatsapp className="h-4 w-4 text-green-500 mr-1" />
                       {client.whatsapp}
                     </div>
                   ) : (
