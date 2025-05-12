@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { supabase } from './supabase';
 import type { AuthState, Client, Column, Lead } from './types';
-import { toast } from '../components/ui/use-toast';
 
 interface AppState extends AuthState {
   columns: Column[];
@@ -24,7 +23,6 @@ interface AppState extends AuthState {
   addLead: (lead: Omit<Lead, 'id' | 'created_at'>) => Promise<void>;
   updateLead: (leadId: string, updates: Partial<Omit<Lead, 'id' | 'created_at'>>) => Promise<void>;
   deleteLead: (leadId: string) => Promise<void>;
-  cancelFollowup: (followupId: string) => Promise<void>;
   deleteFollowup: (followupId: string) => Promise<void>;
 }
 
@@ -260,21 +258,6 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ leads: updatedLeads });
   },
 
-  cancelFollowup: async (followupId) => {
-    try {
-      const { error } = await supabase
-        .from('followups')
-        .update({ status: 'cancelled' })
-        .eq('id', followupId);
-
-      if (error) throw error;
-
-      await get().fetchColumnsAndLeads();
-    } catch (error) {
-      console.error('❌ Erro ao cancelar follow-up:', error);
-    }
-  },
-
   deleteFollowup: async (followupId) => {
     try {
       const { error } = await supabase
@@ -284,27 +267,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       if (error) {
         console.error('❌ Erro ao excluir follow-up:', error);
-        toast({
-          variant: "destructive",
-          title: "Erro ao excluir",
-          description: "Não foi possível excluir o agendamento.",
-        });
         return;
       }
 
-      toast({
-        title: "Agendamento excluído",
-        description: "Cancelado e removido com sucesso.",
-      });
-
+      console.log('✅ Agendamento excluído com sucesso:', followupId);
       await get().fetchColumnsAndLeads();
     } catch (error) {
       console.error('❌ Erro inesperado ao excluir follow-up:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro inesperado",
-        description: "Houve um problema ao excluir o agendamento.",
-      });
     }
   }
 }));
