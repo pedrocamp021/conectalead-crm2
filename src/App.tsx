@@ -18,6 +18,7 @@ import { Reports } from './pages/Reports';
 import { Preferences } from './pages/Preferences';
 import { Profile } from './pages/Profile';
 import { Support } from './pages/Support';
+import { WhatsappConnect } from './pages/WhatsappConnect';
 import { useAppStore } from './lib/store';
 import { supabase } from './lib/supabase';
 
@@ -60,6 +61,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/support" element={<Support />} />
           <Route path="/expired" element={<Expired />} />
+          <Route path="/conectar-whatsapp" element={<WhatsappConnect />} />
           
           {/* Admin routes */}
           <Route path="/admin/clients" element={<AdminClientes />} />

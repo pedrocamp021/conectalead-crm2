@@ -4,7 +4,7 @@ import { useAppStore } from '../../lib/store';
 import { 
   LayoutDashboard, Users, LogOut, X, MessageSquare, 
   BarChart2, Settings, HelpCircle, User, Kanban,
-  Eye
+  Eye, Phone
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -36,6 +36,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       name: 'Relatórios',
       path: '/reports',
       icon: <BarChart2 className="w-5 h-5" />,
+    },
+    {
+      name: 'Conectar WhatsApp',
+      path: '/conectar-whatsapp',
+      icon: <Phone className="w-5 h-5" />,
     },
     {
       name: 'Minha Visualização',
