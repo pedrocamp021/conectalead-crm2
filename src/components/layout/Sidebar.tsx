@@ -1,17 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../lib/store';
-import { 
-  LayoutDashboard, 
-  Users, 
-  LogOut,
-  X,
-  MessageSquare,
-  Calendar,
-  DollarSign,
-  CreditCard,
-  LayoutKanban
-} from 'lucide-react';
+import { LayoutDashboard, Users, LogOut, X, MessageSquare, Calendar, DollarSign, CreditCard, Kanban as LayoutKanban } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
