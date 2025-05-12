@@ -37,15 +37,10 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     setIsLoading(true);
 
     try {
-      // Get current user
       const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError) {
-        console.error('Erro ao obter usuário:', JSON.stringify(userError, null, 2));
-        throw userError;
-      }
+      if (userError) throw userError;
       if (!user) throw new Error('Usuário não autenticado');
 
-      // Insert client record
       const { data, error: insertError } = await supabase
         .from('clients')
         .insert([{
@@ -64,13 +59,9 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         .select()
         .single();
 
-      if (insertError) {
-        console.error('Erro ao inserir cliente:', JSON.stringify(insertError, null, 2));
-        throw insertError;
-      }
+      if (insertError) throw insertError;
       if (!data) throw new Error('Nenhum dado retornado após inserção');
 
-      // Create default columns
       const defaultColumns = [
         { name: 'Novos Leads', order: 1, color: 'blue', client_id: data.id },
         { name: 'Em Contato', order: 2, color: 'yellow', client_id: data.id },
@@ -82,12 +73,13 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         .from('columns')
         .insert(defaultColumns);
 
-      if (columnsError) {
-        console.error('Erro ao criar colunas:', JSON.stringify(columnsError, null, 2));
-        throw columnsError;
-      }
+      if (columnsError) throw columnsError;
 
-      // Reset form data
+      toast({
+        title: "Cliente cadastrado com sucesso",
+        description: "O cliente foi adicionado e as colunas padrão foram criadas.",
+      });
+
       setFormData({
         name: '',
         email: '',
@@ -101,14 +93,11 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         monthly_fee: '0.00'
       });
 
-      // Show success message, update list, and close modal
-      toast({
-        title: "Cliente cadastrado com sucesso",
-        description: "O cliente foi adicionado e as colunas padrão foram criadas.",
-      });
+      setTimeout(() => {
+        onClientAdded();
+        onClose();
+      }, 300);
 
-      onClientAdded();
-      onClose();
     } catch (error: any) {
       console.error('Erro ao cadastrar cliente:', JSON.stringify(error, null, 2));
       toast({
@@ -130,162 +119,57 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="flex flex-col max-h-[90vh] overflow-hidden">
-        {/* Fixed Header */}
         <DialogHeader className="flex-shrink-0 py-4 px-6 border-b">
           <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-          {/* Scrollable Content */}
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Nome da Empresa"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  required
-                />
-
-                <Input
-                  label="Email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                />
+                <Input label="Nome da Empresa" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                <Input label="Email" type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} required />
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="WhatsApp"
-                  type="tel"
-                  value={formData.whatsapp}
-                  onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                  placeholder="+5511999999999"
-                />
-
-                <Input
-                  label="Data de Vencimento"
-                  type="date"
-                  value={formData.plan_expiry}
-                  onChange={(e) => setFormData({ ...formData, plan_expiry: e.target.value })}
-                  required
-                />
+                <Input label="WhatsApp" type="tel" value={formData.whatsapp} onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })} placeholder="+5511999999999" />
+                <Input label="Data de Vencimento" type="date" value={formData.plan_expiry} onChange={(e) => setFormData({ ...formData, plan_expiry: e.target.value })} required />
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Plano
-                  </label>
-                  <select
-                    value={formData.plan_type}
-                    onChange={(e) => setFormData({ ...formData, plan_type: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    required
-                  >
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Plano</label>
+                  <select value={formData.plan_type} onChange={(e) => setFormData({ ...formData, plan_type: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md" required>
                     <option value="mensal">Mensal</option>
                     <option value="trimestral">Trimestral</option>
                     <option value="anual">Anual</option>
                   </select>
                 </div>
-
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status
-                  </label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    required
-                  >
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md" required>
                     <option value="ativo">Ativo</option>
                     <option value="inativo">Inativo</option>
                   </select>
                 </div>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input
-                  label="Valor da Primeira Mensalidade (R$)"
-                  type="text"
-                  value={formData.initial_fee}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    initial_fee: formatCurrency(e.target.value)
-                  })}
-                  required
-                />
-
-                <Input
-                  label="Valor da Mensalidade Recorrente (R$)"
-                  type="text"
-                  value={formData.monthly_fee}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    monthly_fee: formatCurrency(e.target.value)
-                  })}
-                  required
-                />
+                <Input label="Valor da Primeira Mensalidade (R$)" type="text" value={formData.initial_fee} onChange={(e) => setFormData({ ...formData, initial_fee: formatCurrency(e.target.value) })} required />
+                <Input label="Valor da Mensalidade Recorrente (R$)" type="text" value={formData.monthly_fee} onChange={(e) => setFormData({ ...formData, monthly_fee: formatCurrency(e.target.value) })} required />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Mensagem de Cobrança
-                </label>
-                <textarea
-                  value={formData.billing_message}
-                  onChange={(e) => setFormData({ ...formData, billing_message: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  rows={3}
-                  placeholder="Mensagem que será enviada nos avisos de cobrança..."
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-1">Mensagem de Cobrança</label>
+                <textarea value={formData.billing_message} onChange={(e) => setFormData({ ...formData, billing_message: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-md" rows={3} placeholder="Mensagem que será enviada nos avisos de cobrança..." />
               </div>
-
               <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-md">
-                <input
-                  type="checkbox"
-                  id="automation"
-                  checked={formData.billing_automation_enabled}
-                  onChange={(e) => setFormData({
-                    ...formData,
-                    billing_automation_enabled: e.target.checked
-                  })}
-                  className="h-4 w-4 text-blue-600 rounded"
-                />
-                <label htmlFor="automation" className="text-sm text-gray-700">
-                  Ativar automação de cobrança
-                </label>
+                <input type="checkbox" id="automation" checked={formData.billing_automation_enabled} onChange={(e) => setFormData({ ...formData, billing_automation_enabled: e.target.checked })} className="h-4 w-4 text-blue-600 rounded" />
+                <label htmlFor="automation" className="text-sm text-gray-700">Ativar automação de cobrança</label>
               </div>
             </div>
           </div>
-
-          {/* Fixed Footer */}
           <div className="flex-shrink-0 border-t bg-white px-6 py-4">
             <div className="flex justify-end space-x-2">
-              <Button
-                variant="ghost"
-                onClick={onClose}
-                type="button"
-                disabled={isLoading}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                type="submit"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Cadastrando...
-                  </>
-                ) : (
-                  'Cadastrar Cliente'
-                )}
+              <Button variant="ghost" onClick={onClose} type="button" disabled={isLoading}>Cancelar</Button>
+              <Button variant="primary" type="submit" disabled={isLoading}>
+                {isLoading ? (<><Loader2 className="w-4 h-4 mr-2 animate-spin" />Cadastrando...</>) : ('Cadastrar Cliente')}
               </Button>
             </div>
           </div>
