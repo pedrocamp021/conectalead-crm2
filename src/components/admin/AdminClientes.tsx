@@ -20,7 +20,7 @@ interface EditClientForm {
   billing_automation_enabled: boolean;
 }
 
-export const AdminClientes: React.FC = () => {
+const AdminClientes: React.FC = () => {
   const { toast } = useToast();
   const [clients, setClients] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -490,4 +490,4 @@ export const AdminClientes: React.FC = () => {
   );
 };
 
-export { AdminClientes }
+export default AdminClientes;
