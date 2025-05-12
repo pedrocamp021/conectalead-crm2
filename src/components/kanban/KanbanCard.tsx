@@ -8,9 +8,14 @@ import { useNavigate } from 'react-router-dom';
 interface KanbanCardProps {
   lead: Lead;
   onDragStart: (e: React.DragEvent<HTMLDivElement>, leadId: string) => void;
+  readOnly?: boolean;
 }
 
-export const KanbanCard: React.FC<KanbanCardProps> = ({ lead, onDragStart }) => {
+export const KanbanCard: React.FC<KanbanCardProps> = ({ 
+  lead, 
+  onDragStart,
+  readOnly = false
+}) => {
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(lead.name);
   const [phone, setPhone] = useState(lead.phone);
@@ -62,12 +67,11 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ lead, onDragStart }) => 
     year: '2-digit'
   });
 
-  if (isEditing) {
+  if (isEditing && !readOnly) {
     return (
       <div 
         className="bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-2"
-        draggable
-        onDragStart={(e) => onDragStart(e, lead.id)}
+        draggable={false}
       >
         <div className="space-y-2">
           <input
@@ -118,8 +122,11 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ lead, onDragStart }) => 
 
   return (
     <div 
-      className="bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-2 cursor-grab hover:shadow-md transition-shadow duration-200"
-      draggable
+      className={`
+        bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-2 
+        ${!readOnly ? 'cursor-grab hover:shadow-md transition-shadow duration-200' : ''}
+      `}
+      draggable={!readOnly}
       onDragStart={(e) => onDragStart(e, lead.id)}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
@@ -176,20 +183,22 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ lead, onDragStart }) => 
           </svg>
           WhatsApp
         </a>
-        <div className="flex space-x-1">
-          <button 
-            onClick={() => setIsEditing(true)}
-            className="text-gray-500 hover:text-blue-600 p-1 rounded-full hover:bg-gray-100"
-          >
-            <Edit className="h-4 w-4" />
-          </button>
-          <button 
-            onClick={handleDelete}
-            className="text-gray-500 hover:text-red-600 p-1 rounded-full hover:bg-gray-100"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
+        {!readOnly && (
+          <div className="flex space-x-1">
+            <button 
+              onClick={() => setIsEditing(true)}
+              className="text-gray-500 hover:text-blue-600 p-1 rounded-full hover:bg-gray-100"
+            >
+              <Edit className="h-4 w-4" />
+            </button>
+            <button 
+              onClick={handleDelete}
+              className="text-gray-500 hover:text-red-600 p-1 rounded-full hover:bg-gray-100"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

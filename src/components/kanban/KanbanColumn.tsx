@@ -10,13 +10,15 @@ interface KanbanColumnProps {
   onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop: (e: React.DragEvent<HTMLDivElement>, columnId: string) => void;
   onDragStart: (e: React.DragEvent<HTMLDivElement>, leadId: string) => void;
+  readOnly?: boolean;
 }
 
 export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   column,
   onDragOver,
   onDrop,
-  onDragStart
+  onDragStart,
+  readOnly = false
 }) => {
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [newLead, setNewLead] = useState({
@@ -77,9 +79,11 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
             <span className="text-sm bg-white bg-opacity-25 px-2 py-0.5 rounded-full">
               {column.leads?.length || 0}
             </span>
-            <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">
-              <MoreVertical className="h-4 w-4" />
-            </button>
+            {!readOnly && (
+              <button className="p-1 hover:bg-white hover:bg-opacity-20 rounded">
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -89,11 +93,12 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
           <KanbanCard 
             key={lead.id} 
             lead={lead} 
-            onDragStart={onDragStart} 
+            onDragStart={onDragStart}
+            readOnly={readOnly}
           />
         ))}
         
-        {isAddingCard ? (
+        {!readOnly && isAddingCard ? (
           <div className="bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-2">
             <div className="space-y-2">
               <input
@@ -140,7 +145,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
               </div>
             </div>
           </div>
-        ) : (
+        ) : !readOnly && (
           <button
             onClick={() => setIsAddingCard(true)}
             className="w-full p-2 mt-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 text-sm hover:border-blue-400 hover:text-blue-500 transition-colors flex items-center justify-center"
