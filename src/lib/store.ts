@@ -23,6 +23,7 @@ interface AppState extends AuthState {
   addLead: (lead: Omit<Lead, 'id' | 'created_at'>) => Promise<void>;
   updateLead: (leadId: string, updates: Partial<Omit<Lead, 'id' | 'created_at'>>) => Promise<void>;
   deleteLead: (leadId: string) => Promise<void>;
+  cancelFollowup: (followupId: string) => Promise<void>;
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -140,13 +141,15 @@ export const useAppStore = create<AppState>((set, get) => ({
 
       const { data: leadsData, error: leadsError } = await supabase
         .from('leads')
-        .select(`*, followups!inner (id, status)`)  
+        .select(`*, followups!inner ( id, status )`)
         .eq('followups.status', 'scheduled');
+
       if (leadsError) throw leadsError;
 
       const { data: allLeads, error: allLeadsError } = await supabase
         .from('leads')
         .select('*');
+
       if (allLeadsError) throw allLeadsError;
 
       const leadsWithFollowups = new Set(leadsData?.map(l => l.id) || []);
@@ -226,50 +229,60 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   updateLead: async (leadId, updates) => {
-    const { leads, columns } = get();
-
+    const { leads } = get();
     const { error } = await supabase
-      .from("leads")
+      .from('leads')
       .update(updates)
-      .eq("id", leadId);
+      .eq('id', leadId);
 
     if (error) {
-      console.error("❌ Erro ao atualizar lead:", error);
+      console.error('❌ Erro ao atualizar lead:', error);
       return;
     }
 
     const updatedLeads = leads.map((lead) =>
       lead.id === leadId ? { ...lead, ...updates } : lead
     );
-
-    const updatedColumns = columns.map((column) => ({
-      ...column,
-      leads: updatedLeads.filter((lead) => lead.column_id === column.id),
-    }));
-
-    set({ leads: updatedLeads, columns: updatedColumns });
+    set({ leads: updatedLeads });
   },
 
   deleteLead: async (leadId) => {
-    const { leads, columns } = get();
-
+    const { leads } = get();
     const { error } = await supabase
-      .from("leads")
+      .from('leads')
       .delete()
-      .eq("id", leadId);
+      .eq('id', leadId);
 
     if (error) {
-      console.error("❌ Erro ao deletar lead:", error);
+      console.error('❌ Erro ao deletar lead:', error);
       return;
     }
 
-    const updatedLeads = leads.filter((l) => l.id !== leadId);
-
-    const updatedColumns = columns.map((column) => ({
-      ...column,
-      leads: updatedLeads.filter((lead) => lead.column_id === column.id),
-    }));
-
-    set({ leads: updatedLeads, columns: updatedColumns });
+    const updatedLeads = leads.filter(l => l.id !== leadId);
+    set({ leads: updatedLeads });
   },
+
+  cancelFollowup: async (followupId) => {
+    const { leads } = get();
+
+    const { error } = await supabase
+      .from('followups')
+      .update({ status: 'cancelled' })
+      .eq('id', followupId);
+
+    if (error) {
+      console.error('❌ Erro ao cancelar follow-up:', error);
+      return;
+    }
+
+    const updatedLeads = leads.map((lead) => {
+      if (lead.followups?.some((f) => f.id === followupId)) {
+        return { ...lead, has_followup: false };
+      }
+      return lead;
+    });
+
+    set({ leads: updatedLeads });
+  },
+
 }));
