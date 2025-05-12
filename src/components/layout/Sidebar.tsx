@@ -4,13 +4,13 @@ import { useAppStore } from '../../lib/store';
 import { 
   LayoutDashboard, 
   Users, 
-  BarChart3, 
   LogOut,
   X,
   MessageSquare,
   Calendar,
   DollarSign,
-  CreditCard
+  CreditCard,
+  LayoutKanban
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -30,16 +30,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       show: true,
     },
     {
-      name: 'Gestão de Clientes',
-      path: '/admin/clients',
-      icon: <Users className="w-5 h-5" />,
-      show: isAdmin,
-    },
-    {
       name: 'Follow-up Messenger',
       path: '/followups',
       icon: <MessageSquare className="w-5 h-5" />,
       show: !isAdmin,
+    },
+    {
+      group: 'Administração',
+      show: isAdmin,
+      items: [
+        {
+          name: 'Gestão de Clientes',
+          path: '/admin/clients',
+          icon: <Users className="w-5 h-5" />,
+        },
+        {
+          name: 'Visualizar Kanban',
+          path: '/admin/kanban',
+          icon: <LayoutKanban className="w-5 h-5" />,
+        }
+      ]
     },
     {
       group: 'Financeiro',

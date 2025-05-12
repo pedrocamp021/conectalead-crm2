@@ -2,11 +2,15 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
-import { Admin } from './pages/Admin';
 import { Expired } from './pages/Expired';
 import { NotFound } from './pages/NotFound';
 import { Followups } from './pages/Followups';
 import { Layout } from './components/layout/Layout';
+import { AdminClientes } from './components/admin/AdminClientes';
+import { AdminKanban } from './components/admin/AdminKanban';
+import { AdminAutomacao } from './components/admin/AdminAutomacao';
+import { AdminPrevisao } from './components/admin/AdminPrevisao';
+import { AdminPagamentos } from './components/admin/AdminPagamentos';
 import { useAppStore } from './lib/store';
 import { supabase } from './lib/supabase';
 
@@ -43,10 +47,17 @@ function App() {
         
         {/* Protected routes */}
         <Route element={<Layout />}>
+          {/* Common routes */}
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/admin" element={<Admin />} />
           <Route path="/followups" element={<Followups />} />
           <Route path="/expired" element={<Expired />} />
+          
+          {/* Admin routes */}
+          <Route path="/admin/clients" element={<AdminClientes />} />
+          <Route path="/admin/kanban" element={<AdminKanban />} />
+          <Route path="/admin/billing" element={<AdminAutomacao />} />
+          <Route path="/admin/forecast" element={<AdminPrevisao />} />
+          <Route path="/admin/payments" element={<AdminPagamentos />} />
         </Route>
         
         <Route path="/404" element={<NotFound />} />
@@ -57,4 +68,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
