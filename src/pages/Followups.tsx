@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useAppStore } from '../../lib/store';
-import { supabase } from '../../lib/supabase';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { useAppStore } from '../lib/store';
+import { supabase } from '../lib/supabase';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
 import { BulkScheduleModal } from '../components/followup/BulkScheduleModal';
 import { 
   Loader2, Plus, Calendar, MessageSquare, Clock, Edit, 
   Trash2, CheckCircle, XCircle, Users, Search, Filter 
 } from 'lucide-react';
-import type { Followup, Lead, Column } from '../../lib/types';
+import type { Followup, Lead, Column } from '../lib/types';
 
 type StatusFilter = 'all' | 'scheduled' | 'sent' | 'cancelled';
 
@@ -135,9 +135,8 @@ export const Followups: React.FC = () => {
   };
 
   const handleCancelFollowup = async (followupId: string) => {
-    if (!window.confirm('Tem certeza que deseja cancelar esta mensagem?')) {
-      return;
-    }
+    const confirmed = window.confirm("Tem certeza que deseja cancelar esta mensagem?");
+    if (!confirmed) return;
 
     try {
       const { error } = await supabase
@@ -149,7 +148,7 @@ export const Followups: React.FC = () => {
       await fetchFollowups();
     } catch (error) {
       console.error('Erro ao cancelar follow-up:', error);
-      alert('Erro ao cancelar mensagem. Por favor, tente novamente.');
+      alert('Erro ao cancelar. Tente novamente.');
     }
   };
 
