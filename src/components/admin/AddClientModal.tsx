@@ -22,52 +22,67 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    whatsapp: '',
+    phone: '',
+    cnpj: '',
     plan_type: 'mensal',
     status: 'ativo',
     billing_day: 1,
     billing_message: '',
     billing_automation_enabled: false,
     initial_fee: '0.00',
-    monthly_fee: '0.00',
-    password: '12345678'
+    monthly_fee: '0.00'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate required fields
+    if (!formData.name || !formData.email || !formData.phone) {
+      toast({
+        variant: "destructive",
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios.",
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // 1. Create auth user
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Create auth user with random password
+      const tempPassword = Math.random().toString(36).slice(-8);
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password,
-        email_confirm: true
+        password: tempPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/login`
+        }
       });
 
       if (authError) throw authError;
       if (!authData.user) throw new Error('Failed to create user');
 
-      // 2. Create client record
+      // Create client record
       const { error: clientError } = await supabase
         .from('clients')
         .insert([{
           id: authData.user.id,
           name: formData.name,
           email: formData.email,
-          whatsapp: formData.whatsapp,
+          whatsapp: formData.phone,
           plan_type: formData.plan_type,
           status: formData.status,
           billing_day: formData.billing_day,
           billing_message: formData.billing_message,
           billing_automation_enabled: formData.billing_automation_enabled,
           initial_fee: parseFloat(formData.initial_fee),
-          monthly_fee: parseFloat(formData.monthly_fee)
+          monthly_fee: parseFloat(formData.monthly_fee),
+          cnpj: formData.cnpj
         }]);
 
       if (clientError) throw clientError;
 
-      // 3. Create default columns
+      // Create default columns
       const defaultColumns = [
         { name: 'Novos Leads', order: 1, color: 'blue', client_id: authData.user.id },
         { name: 'Em Contato', order: 2, color: 'yellow', client_id: authData.user.id },
@@ -81,12 +96,27 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
       if (columnsError) throw columnsError;
 
-      // 4. Send password reset email
+      // Send password reset email
       await supabase.auth.resetPasswordForEmail(formData.email);
 
       toast({
-        title: "Cliente cadastrado com sucesso",
+        title: "Cliente cadastrado",
         description: "Um email de redefinição de senha foi enviado.",
+      });
+
+      // Reset form
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        cnpj: '',
+        plan_type: 'mensal',
+        status: 'ativo',
+        billing_day: 1,
+        billing_message: '',
+        billing_automation_enabled: false,
+        initial_fee: '0.00',
+        monthly_fee: '0.00'
       });
 
       onClientAdded();
@@ -119,14 +149,14 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto py-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Nome da Empresa"
+              label="Nome da Empresa *"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
             />
 
             <Input
-              label="Email"
+              label="Email *"
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -136,24 +166,19 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="WhatsApp"
+              label="Telefone *"
               type="tel"
-              value={formData.whatsapp}
-              onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
               placeholder="+5511999999999"
+              required
             />
 
             <Input
-              label="Dia do Vencimento"
-              type="number"
-              min="1"
-              max="31"
-              value={formData.billing_day}
-              onChange={(e) => setFormData({ 
-                ...formData, 
-                billing_day: parseInt(e.target.value) 
-              })}
-              required
+              label="CNPJ"
+              value={formData.cnpj}
+              onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
+              placeholder="00.000.000/0000-00"
             />
           </div>
 
@@ -213,6 +238,19 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
               required
             />
           </div>
+
+          <Input
+            label="Dia do Vencimento"
+            type="number"
+            min="1"
+            max="31"
+            value={formData.billing_day}
+            onChange={(e) => setFormData({ 
+              ...formData, 
+              billing_day: parseInt(e.target.value) 
+            })}
+            required
+          />
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
