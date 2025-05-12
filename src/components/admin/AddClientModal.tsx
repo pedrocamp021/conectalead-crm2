@@ -40,6 +40,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return; // Prevent double submission
     setIsLoading(true);
 
     try {
@@ -77,6 +78,16 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
       const { error: columnsError } = await supabase.from('columns').insert(defaultColumns);
       if (columnsError) throw columnsError;
 
+      // Show success message immediately
+      toast({
+        title: 'Cliente cadastrado com sucesso',
+        description: 'O cliente foi adicionado e as colunas padrão foram criadas.',
+      });
+
+      // Update client list
+      onClientAdded();
+
+      // Reset form
       setFormData({
         name: '',
         email: '',
@@ -90,18 +101,13 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         monthly_fee: '0.00'
       });
 
-      toast({
-        title: 'Cliente cadastrado com sucesso',
-        description: 'O cliente foi adicionado e as colunas padrão foram criadas.',
-      });
-
-      onClientAdded();
+      // Close modal with small delay to ensure toast is visible
       setTimeout(() => {
         onClose();
-      }, 100); // Pequeno delay para garantir que o toast apareça antes do fechamento
+      }, 100);
 
     } catch (error: any) {
-      console.error('Erro ao cadastrar cliente:', error);
+      console.error('Erro ao cadastrar cliente:', JSON.stringify(error, null, 2));
       toast({
         variant: 'destructive',
         title: 'Erro ao cadastrar',
