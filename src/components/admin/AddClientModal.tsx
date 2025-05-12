@@ -22,67 +22,52 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
-    cnpj: '',
+    whatsapp: '',
     plan_type: 'mensal',
     status: 'ativo',
-    expiration_date: '',
+    billing_day: 1,
     billing_message: '',
     billing_automation_enabled: false,
     initial_fee: '0.00',
-    monthly_fee: '0.00'
+    monthly_fee: '0.00',
+    password: '12345678'
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // Validate required fields
-    if (!formData.name || !formData.email || !formData.phone || !formData.expiration_date) {
-      toast({
-        variant: "destructive",
-        title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios.",
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      // Create auth user with random password
-      const tempPassword = Math.random().toString(36).slice(-8);
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // 1. Create auth user
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: formData.email,
-        password: tempPassword,
-        options: {
-          emailRedirectTo: `${window.location.origin}/login`
-        }
+        password: formData.password,
+        email_confirm: true
       });
 
       if (authError) throw authError;
       if (!authData.user) throw new Error('Failed to create user');
 
-      // Create client record
+      // 2. Create client record
       const { error: clientError } = await supabase
         .from('clients')
         .insert([{
           id: authData.user.id,
           name: formData.name,
           email: formData.email,
-          whatsapp: formData.phone,
+          whatsapp: formData.whatsapp,
           plan_type: formData.plan_type,
           status: formData.status,
-          expiration_date: formData.expiration_date,
+          billing_day: formData.billing_day,
           billing_message: formData.billing_message,
           billing_automation_enabled: formData.billing_automation_enabled,
           initial_fee: parseFloat(formData.initial_fee),
-          monthly_fee: parseFloat(formData.monthly_fee),
-          cnpj: formData.cnpj
+          monthly_fee: parseFloat(formData.monthly_fee)
         }]);
 
       if (clientError) throw clientError;
 
-      // Create default columns
+      // 3. Create default columns
       const defaultColumns = [
         { name: 'Novos Leads', order: 1, color: 'blue', client_id: authData.user.id },
         { name: 'Em Contato', order: 2, color: 'yellow', client_id: authData.user.id },
@@ -96,27 +81,12 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
       if (columnsError) throw columnsError;
 
-      // Send password reset email
+      // 4. Send password reset email
       await supabase.auth.resetPasswordForEmail(formData.email);
 
       toast({
-        title: "Cliente cadastrado",
+        title: "Cliente cadastrado com sucesso",
         description: "Um email de redefinição de senha foi enviado.",
-      });
-
-      // Reset form
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        cnpj: '',
-        plan_type: 'mensal',
-        status: 'ativo',
-        expiration_date: '',
-        billing_message: '',
-        billing_automation_enabled: false,
-        initial_fee: '0.00',
-        monthly_fee: '0.00'
       });
 
       onClientAdded();
@@ -141,26 +111,26 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Fixed Header */}
-        <DialogHeader className="flex-shrink-0 px-6 py-4 border-b">
+        <DialogHeader className="flex-shrink-0 border-b p-4">
           <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="flex flex-col flex-1">
-          {/* Scrollable Form Content */}
-          <div className="flex-1 overflow-y-auto px-6">
-            <div className="space-y-4 py-6">
+        <form onSubmit={handleSubmit} className="flex flex-col h-full">
+          {/* Scrollable Content */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
-                  label="Nome da Empresa *"
+                  label="Nome da Empresa"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                 />
 
                 <Input
-                  label="Email *"
+                  label="Email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -170,19 +140,24 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
-                  label="Telefone *"
+                  label="WhatsApp"
                   type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  value={formData.whatsapp}
+                  onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
                   placeholder="+5511999999999"
-                  required
                 />
 
                 <Input
-                  label="CNPJ"
-                  value={formData.cnpj}
-                  onChange={(e) => setFormData({ ...formData, cnpj: e.target.value })}
-                  placeholder="00.000.000/0000-00"
+                  label="Dia do Vencimento"
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={formData.billing_day}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    billing_day: parseInt(e.target.value) 
+                  })}
+                  required
                 />
               </div>
 
@@ -243,14 +218,6 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
                 />
               </div>
 
-              <Input
-                label="Data de Vencimento *"
-                type="date"
-                value={formData.expiration_date}
-                onChange={(e) => setFormData({ ...formData, expiration_date: e.target.value })}
-                required
-              />
-
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Mensagem de Cobrança
@@ -282,8 +249,8 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
             </div>
           </div>
 
-          {/* Fixed Button Container */}
-          <div className="flex-shrink-0 px-6 py-4 bg-white border-t flex justify-end space-x-2">
+          {/* Fixed Footer */}
+          <div className="flex-shrink-0 border-t p-4 bg-white flex justify-end space-x-2">
             <Button
               variant="ghost"
               onClick={onClose}
