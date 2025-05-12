@@ -4,10 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useToast } from '../ui/use-toast';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
-import { 
-  Search, Filter, Calendar, BellRing, MessageSquare, 
-  Loader2, CheckCircle, XCircle, Clock, Whatsapp 
-} from 'lucide-react';
+import { Search, Filter, Calendar, BellRing, MessageSquare, Loader2, CheckCircle, XCircle, Clock, Wheat as Whatsapp } from 'lucide-react';
 
 interface Client {
   id: string;
