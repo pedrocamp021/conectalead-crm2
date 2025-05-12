@@ -37,8 +37,16 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
     setIsLoading(true);
 
     try {
+      // Get current user
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error('Erro ao obter usuário:', JSON.stringify(userError, null, 2));
+        throw userError;
+      }
+      if (!user) throw new Error('Usuário não autenticado');
+
       // Insert client record
-      const { data, error } = await supabase
+      const { data, error: insertError } = await supabase
         .from('clients')
         .insert([{
           name: formData.name,
@@ -50,13 +58,17 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
           billing_message: formData.billing_message,
           billing_automation_enabled: formData.billing_automation_enabled,
           initial_fee: parseFloat(formData.initial_fee),
-          monthly_fee: parseFloat(formData.monthly_fee)
+          monthly_fee: parseFloat(formData.monthly_fee),
+          user_id: user.id
         }])
         .select()
         .single();
 
-      if (error) throw error;
-      if (!data) throw new Error('No data returned from insert');
+      if (insertError) {
+        console.error('Erro ao inserir cliente:', JSON.stringify(insertError, null, 2));
+        throw insertError;
+      }
+      if (!data) throw new Error('Nenhum dado retornado após inserção');
 
       // Create default columns
       const defaultColumns = [
@@ -70,7 +82,10 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
         .from('columns')
         .insert(defaultColumns);
 
-      if (columnsError) throw columnsError;
+      if (columnsError) {
+        console.error('Erro ao criar colunas:', JSON.stringify(columnsError, null, 2));
+        throw columnsError;
+      }
 
       toast({
         title: "Cliente cadastrado com sucesso",
@@ -94,7 +109,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
       onClientAdded();
       onClose();
     } catch (error: any) {
-      console.error('Erro ao cadastrar cliente:', error);
+      console.error('Erro ao cadastrar cliente:', JSON.stringify(error, null, 2));
       toast({
         variant: "destructive",
         title: "Erro ao cadastrar",
