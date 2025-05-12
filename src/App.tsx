@@ -13,6 +13,11 @@ import { AdminPrevisao } from './components/admin/AdminPrevisao';
 import { AdminPagamentos } from './components/admin/AdminPagamentos';
 import { AdminConfiguracao } from './components/admin/AdminConfiguracao';
 import { AdminRecorrencia } from './components/admin/AdminRecorrencia';
+import { KanbanBoard } from './components/kanban/KanbanBoard';
+import { Reports } from './pages/Reports';
+import { Preferences } from './pages/Preferences';
+import { Profile } from './pages/Profile';
+import { Support } from './pages/Support';
 import { useAppStore } from './lib/store';
 import { supabase } from './lib/supabase';
 
@@ -48,12 +53,12 @@ function App() {
         <Route element={<Layout />}>
           {/* Common routes */}
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/kanban" element={<Dashboard />} />
+          <Route path="/kanban" element={<KanbanBoard />} />
           <Route path="/followups" element={<Followups />} />
-          <Route path="/reports" element={<Dashboard />} />
-          <Route path="/preferences" element={<Dashboard />} />
-          <Route path="/profile" element={<Dashboard />} />
-          <Route path="/support" element={<Dashboard />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/preferences" element={<Preferences />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/support" element={<Support />} />
           <Route path="/expired" element={<Expired />} />
           
           {/* Admin routes */}
