@@ -3,6 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { supabase } from '../../lib/supabase';
+import { useToast } from '../ui/use-toast';
 
 interface EditClientModalProps {
   open: boolean;
@@ -10,26 +11,48 @@ interface EditClientModalProps {
   client: {
     id: string;
     name: string;
-    plan: string;
+    email: string;
+    plan_type: string;
+    plan_expiry: string;
     status: string;
-    expiration: string;
+    whatsapp: string;
+    billing_day: number;
+    billing_message: string;
   } | null;
   onUpdate: () => void;
 }
 
-export const EditClientModal: React.FC<EditClientModalProps> = ({ open, onClose, client, onUpdate }) => {
-  const [name, setName] = useState('');
-  const [plan, setPlan] = useState('');
-  const [status, setStatus] = useState('');
-  const [expiration, setExpiration] = useState('');
+export const EditClientModal: React.FC<EditClientModalProps> = ({ 
+  open, 
+  onClose, 
+  client, 
+  onUpdate 
+}) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    plan_type: 'mensal',
+    plan_expiry: '',
+    status: 'ativo',
+    whatsapp: '',
+    billing_day: 1,
+    billing_message: ''
+  });
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (client) {
-      setName(client.name);
-      setPlan(client.plan);
-      setStatus(client.status);
-      setExpiration(client.expiration);
+      setFormData({
+        name: client.name,
+        email: client.email,
+        plan_type: client.plan_type,
+        plan_expiry: client.plan_expiry,
+        status: client.status,
+        whatsapp: client.whatsapp || '',
+        billing_day: client.billing_day || 1,
+        billing_message: client.billing_message || ''
+      });
     }
   }, [client]);
 
@@ -37,19 +60,30 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({ open, onClose,
     if (!client) return;
     setLoading(true);
 
-    const { error } = await supabase
-      .from('clients')
-      .update({ name, plan, status, expiration })
-      .eq('id', client.id);
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update(formData)
+        .eq('id', client.id);
 
-    setLoading(false);
+      if (error) throw error;
 
-    if (!error) {
+      toast({
+        title: "Cliente atualizado",
+        description: "As alterações foram salvas com sucesso.",
+      });
+
       onUpdate();
       onClose();
-    } else {
-      alert('Error saving changes.');
-      console.error(error);
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao salvar",
+        description: "Não foi possível atualizar o cliente.",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,55 +91,96 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({ open, onClose,
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit Client</DialogTitle>
+          <DialogTitle>Editar Cliente</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4">
+        <div className="space-y-4 mt-4">
           <Input 
-            label="Name"
-            value={name} 
-            onChange={(e) => setName(e.target.value)} 
-            placeholder="Name" 
+            label="Nome"
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           />
+          
+          <Input 
+            label="Email"
+            type="email"
+            value={formData.email}
+            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          />
+
+          <Input 
+            label="WhatsApp"
+            type="tel"
+            value={formData.whatsapp}
+            onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+            placeholder="+5511999999999"
+          />
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Plan
+              Tipo de Plano
             </label>
             <select
-              value={plan}
-              onChange={(e) => setPlan(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={formData.plan_type}
+              onChange={(e) => setFormData({ ...formData, plan_type: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-              <option value="free">Free</option>
-              <option value="trial">Trial</option>
-              <option value="monthly">Monthly</option>
+              <option value="mensal">Mensal</option>
+              <option value="trimestral">Trimestral</option>
+              <option value="anual">Anual</option>
             </select>
           </div>
+
+          <Input
+            label="Dia do Vencimento"
+            type="number"
+            min="1"
+            max="31"
+            value={formData.billing_day}
+            onChange={(e) => setFormData({ ...formData, billing_day: parseInt(e.target.value) })}
+          />
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mensagem de Cobrança
+            </label>
+            <textarea
+              value={formData.billing_message}
+              onChange={(e) => setFormData({ ...formData, billing_message: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              rows={3}
+              placeholder="Mensagem que será enviada nos avisos de cobrança..."
+            />
+          </div>
+
+          <Input
+            label="Data de Vencimento"
+            type="date"
+            value={formData.plan_expiry.split('T')[0]}
+            onChange={(e) => setFormData({ ...formData, plan_expiry: e.target.value })}
+          />
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Status
             </label>
             <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="ativo">Ativo</option>
+              <option value="inativo">Inativo</option>
+              <option value="vencido">Vencido</option>
             </select>
           </div>
-          <Input
-            label="Expiration Date"
-            type="date"
-            value={expiration}
-            onChange={(e) => setExpiration(e.target.value)}
-          />
         </div>
-        <div className="flex justify-end gap-2 mt-4">
+
+        <div className="flex justify-end gap-2 mt-6">
           <Button variant="ghost" onClick={onClose} disabled={loading}>
-            Cancel
+            Cancelar
           </Button>
           <Button variant="primary" onClick={handleSave} disabled={loading}>
-            {loading ? 'Saving...' : 'Save Changes'}
+            {loading ? 'Salvando...' : 'Salvar Alterações'}
           </Button>
         </div>
       </DialogContent>
