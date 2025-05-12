@@ -240,49 +240,36 @@ export const useAppStore = create<AppState>((set, get) => ({
       return;
     }
 
-    const updatedLeads = leads.map((lead) =>
-      lead.id === leadId ? { ...lead, ...updates } : lead
+    const updatedLeads = leads.map(l =>
+      l.id === leadId ? { ...l, ...updates } : l
     );
+
     set({ leads: updatedLeads });
   },
 
   deleteLead: async (leadId) => {
     const { leads } = get();
-    const { error } = await supabase
-      .from('leads')
-      .delete()
-      .eq('id', leadId);
-
+    const { error } = await supabase.from('leads').delete().eq('id', leadId);
     if (error) {
-      console.error('❌ Erro ao deletar lead:', error);
+      console.error('❌ Erro ao excluir lead:', error);
       return;
     }
-
     const updatedLeads = leads.filter(l => l.id !== leadId);
     set({ leads: updatedLeads });
   },
 
   cancelFollowup: async (followupId) => {
-    const { leads } = get();
+    try {
+      const { error } = await supabase
+        .from('followups')
+        .update({ status: 'cancelled' })
+        .eq('id', followupId);
 
-    const { error } = await supabase
-      .from('followups')
-      .update({ status: 'cancelled' })
-      .eq('id', followupId);
+      if (error) throw error;
 
-    if (error) {
+      await get().fetchColumnsAndLeads();
+    } catch (error) {
       console.error('❌ Erro ao cancelar follow-up:', error);
-      return;
     }
-
-    const updatedLeads = leads.map((lead) => {
-      if (lead.followups?.some((f) => f.id === followupId)) {
-        return { ...lead, has_followup: false };
-      }
-      return lead;
-    });
-
-    set({ leads: updatedLeads });
-  },
-
+  }
 }));
