@@ -35,12 +35,12 @@ export const Layout: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50">
       <Header toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
-      <main className="flex-1 overflow-auto pt-16 pb-6 px-4 md:px-6 lg:pl-72">
-        <div className="max-w-7xl mx-auto mt-6">
+      <main className="pt-16 transition-all duration-300 lg:pl-64">
+        <div className="max-w-7xl mx-auto p-4 md:p-6">
           <Outlet />
         </div>
       </main>

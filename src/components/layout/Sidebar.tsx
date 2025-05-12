@@ -112,19 +112,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {/* Sidebar */}
       <aside 
         className={`
-          fixed top-0 left-0 z-30 w-64 h-full bg-gray-800 text-white transition-transform duration-300 transform
-          pt-16 lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          fixed top-0 left-0 z-30 w-64 h-full bg-gray-800 text-white transition-transform duration-300
+          lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-white lg:hidden"
-        >
-          <X className="w-6 h-6" />
-        </button>
+        <div className="h-16 flex items-center justify-between px-4 lg:justify-center">
+          <Link to="/dashboard" className="flex items-center">
+            <div className="rounded-md bg-blue-600 text-white p-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <span className="ml-2 text-xl font-semibold">ConectaLead</span>
+          </Link>
+          
+          <button 
+            onClick={onClose}
+            className="lg:hidden text-gray-400 hover:text-white"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
         
-        <div className="p-4">
-          <nav className="space-y-1">
+        <div className="overflow-y-auto h-[calc(100vh-4rem)]">
+          <nav className="px-4 py-4 space-y-1">
             {navigation.map((item, index) => {
               if ('group' in item) {
                 return (
