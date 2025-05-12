@@ -15,7 +15,6 @@ interface EditClientForm {
   plan_type: string;
   status: string;
   plan_expiry: string;
-  billing_day: number;
   whatsapp: string;
   billing_message: string;
   billing_automation_enabled: boolean;
@@ -65,7 +64,6 @@ export const AdminClientes: React.FC = () => {
       plan_type: client.plan_type,
       status: client.status,
       plan_expiry: client.plan_expiry || new Date().toISOString().split('T')[0],
-      billing_day: client.billing_day || 1,
       whatsapp: client.whatsapp || '',
       billing_message: client.billing_message || '',
       billing_automation_enabled: client.billing_automation_enabled || false,
@@ -75,7 +73,6 @@ export const AdminClientes: React.FC = () => {
 
   const handleSaveClient = async () => {
     if (!editingClient) return;
-
     try {
       const { error } = await supabase
         .from('clients')
@@ -85,10 +82,9 @@ export const AdminClientes: React.FC = () => {
           plan_type: editingClient.plan_type,
           status: editingClient.status,
           plan_expiry: editingClient.plan_expiry,
-          billing_day: editingClient.billing_day,
           whatsapp: editingClient.whatsapp,
           billing_message: editingClient.billing_message,
-          billing_automation_enabled: editingClient.billing_automation_enabled,
+          billing_automation_enabled: editingClient.billing_automation_enabled
         })
         .eq('id', editingClient.id);
 
@@ -366,18 +362,6 @@ export const AdminClientes: React.FC = () => {
                   value={editingClient.whatsapp}
                   onChange={(e) => setEditingClient({ ...editingClient, whatsapp: e.target.value })}
                   placeholder="+5511999999999"
-                />
-
-                <Input
-                  label="Dia do Vencimento"
-                  type="number"
-                  min="1"
-                  max="31"
-                  value={editingClient.billing_day}
-                  onChange={(e) => setEditingClient({ 
-                    ...editingClient, 
-                    billing_day: parseInt(e.target.value) 
-                  })}
                 />
               </div>
 
