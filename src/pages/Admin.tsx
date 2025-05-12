@@ -3,12 +3,15 @@ import { Navigate } from 'react-router-dom';
 import { useAppStore } from '../lib/store';
 import { AdminClientes } from '../components/admin/AdminClientes';
 import { AdminKanban } from '../components/admin/AdminKanban';
+import { AdminAutomacao } from '../components/admin/AdminAutomacao';
 import { Button } from '../components/ui/Button';
-import { Users, LayoutDashboard } from 'lucide-react';
+import { Users, LayoutDashboard, BellRing } from 'lucide-react';
+
+type AdminView = 'clients' | 'kanban' | 'automation';
 
 export const Admin: React.FC = () => {
   const { isAdmin } = useAppStore();
-  const [view, setView] = useState<'clients' | 'kanban'>('clients');
+  const [view, setView] = useState<AdminView>('clients');
 
   if (!isAdmin) {
     return <Navigate to="/dashboard" replace />;
@@ -18,7 +21,9 @@ export const Admin: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">
-          {view === 'clients' ? 'Client Management' : 'Kanban Overview'}
+          {view === 'clients' && 'Client Management'}
+          {view === 'kanban' && 'Kanban Overview'}
+          {view === 'automation' && 'Billing Automation'}
         </h2>
         
         <div className="flex space-x-2">
@@ -36,10 +41,19 @@ export const Admin: React.FC = () => {
           >
             Kanban
           </Button>
+          <Button
+            variant={view === 'automation' ? 'primary' : 'ghost'}
+            onClick={() => setView('automation')}
+            icon={<BellRing className="h-4 w-4" />}
+          >
+            Automation
+          </Button>
         </div>
       </div>
 
-      {view === 'clients' ? <AdminClientes /> : <AdminKanban />}
+      {view === 'clients' && <AdminClientes />}
+      {view === 'kanban' && <AdminKanban />}
+      {view === 'automation' && <AdminAutomacao />}
     </div>
   );
 };
