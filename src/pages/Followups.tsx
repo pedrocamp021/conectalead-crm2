@@ -30,7 +30,7 @@ export const Followups: React.FC = () => {
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
   const selectedLeadId = searchParams.get('lead');
-  const { client } = useAppStore();
+  const { client, deleteFollowup } = useAppStore();
   
   const [followups, setFollowups] = useState<FollowupWithLead[]>([]);
   const [columns, setColumns] = useState<Column[]>([]);
@@ -178,13 +178,7 @@ export const Followups: React.FC = () => {
     if (!confirmed) return;
 
     try {
-      const { error } = await supabase
-        .from('followups')
-        .delete()
-        .eq('id', followupId);
-
-      if (error) throw error;
-      
+      await deleteFollowup(followupId);
       await fetchFollowups();
       
       toast({
