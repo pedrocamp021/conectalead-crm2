@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Admin } from './pages/Admin';
 import { Expired } from './pages/Expired';
 import { NotFound } from './pages/NotFound';
+import { Followups } from './pages/Followups';
 import { Layout } from './components/layout/Layout';
 import { useAppStore } from './lib/store';
 import { supabase } from './lib/supabase';
@@ -44,6 +45,7 @@ function App() {
         <Route element={<Layout />}>
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/followups" element={<Followups />} />
           <Route path="/expired" element={<Expired />} />
         </Route>
         
@@ -54,5 +56,3 @@ function App() {
     </BrowserRouter>
   );
 }
-
-export default App;

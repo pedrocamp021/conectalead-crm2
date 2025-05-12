@@ -32,6 +32,15 @@ export interface Lead {
   column_id: string;
   client_id: string;
   created_at: string;
+  has_followup?: boolean;
+}
+
+export interface Followup {
+  id: string;
+  lead_id: string;
+  scheduled_for: string;
+  message_template: string;
+  created_at: string;
 }
 
 export interface AuthState {

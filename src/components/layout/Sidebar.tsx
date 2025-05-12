@@ -6,7 +6,8 @@ import {
   Users, 
   BarChart3, 
   LogOut,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -30,6 +31,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       path: '/admin',
       icon: <Users className="w-5 h-5" />,
       show: isAdmin,
+    },
+    {
+      name: 'Follow-up Messenger',
+      path: '/followups',
+      icon: <MessageSquare className="w-5 h-5" />,
+      show: !isAdmin,
     },
     {
       name: 'Reports',

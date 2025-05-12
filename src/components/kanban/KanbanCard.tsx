@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Lead } from '../../lib/types';
 import { useAppStore } from '../../lib/store';
-import { Phone, MessageSquare, Edit, Trash2 } from 'lucide-react';
+import { Phone, MessageSquare, Edit, Trash2, Clock } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useNavigate } from 'react-router-dom';
 
 interface KanbanCardProps {
   lead: Lead;
@@ -18,17 +19,15 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ lead, onDragStart }) => 
   const [isHovering, setIsHovering] = useState(false);
   
   const { updateLead, deleteLead } = useAppStore();
+  const navigate = useNavigate();
 
   const formatPhone = (phoneNumber: string) => {
-    // Remove non-digits
     const digits = phoneNumber.replace(/\D/g, '');
     
-    // Format for WhatsApp if it starts with country code
     if (digits.startsWith('55')) {
       return digits;
     }
     
-    // Add Brazil code if not present
     return `55${digits}`;
   };
 
@@ -48,9 +47,13 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ lead, onDragStart }) => 
   };
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this lead?')) {
+    if (window.confirm('Tem certeza que deseja excluir este lead?')) {
       await deleteLead(lead.id);
     }
+  };
+
+  const handleFollowupClick = () => {
+    navigate(`/followups?lead=${lead.id}`);
   };
 
   const formattedDate = new Date(lead.created_at).toLocaleDateString('pt-BR', {
@@ -71,25 +74,25 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ lead, onDragStart }) => 
             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Name"
+            placeholder="Nome"
           />
           <input
             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="Phone"
+            placeholder="Telefone"
           />
           <input
             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
             value={interest}
             onChange={(e) => setInterest(e.target.value)}
-            placeholder="Interest"
+            placeholder="Interesse"
           />
           <textarea
             className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Notes"
+            placeholder="Observações"
             rows={2}
           />
           <div className="flex justify-end space-x-2 pt-2">
@@ -98,14 +101,14 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ lead, onDragStart }) => 
               size="sm" 
               onClick={() => setIsEditing(false)}
             >
-              Cancel
+              Cancelar
             </Button>
             <Button 
               variant="primary" 
               size="sm" 
               onClick={handleSave}
             >
-              Save
+              Salvar
             </Button>
           </div>
         </div>
@@ -123,7 +126,18 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ lead, onDragStart }) => 
     >
       <div className="flex justify-between items-start">
         <h3 className="font-medium text-gray-900">{lead.name}</h3>
-        <span className="text-xs text-gray-500">{formattedDate}</span>
+        <div className="flex items-center space-x-2">
+          {lead.has_followup && (
+            <button
+              onClick={handleFollowupClick}
+              className="text-blue-500 hover:text-blue-600"
+              title="Ver mensagens agendadas"
+            >
+              <Clock className="h-4 w-4" />
+            </button>
+          )}
+          <span className="text-xs text-gray-500">{formattedDate}</span>
+        </div>
       </div>
       
       <div className="mt-2 flex items-center text-sm text-gray-600">
@@ -133,7 +147,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ lead, onDragStart }) => 
       
       {lead.interest && (
         <div className="mt-1 text-sm text-gray-600">
-          <span className="font-medium">Interest:</span> {lead.interest}
+          <span className="font-medium">Interesse:</span> {lead.interest}
         </div>
       )}
       
