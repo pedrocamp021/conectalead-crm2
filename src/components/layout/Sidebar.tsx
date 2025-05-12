@@ -116,6 +116,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
+        {/* Logo and Close Button */}
         <div className="h-16 flex items-center justify-between px-4 lg:justify-center">
           <Link to="/dashboard" className="flex items-center">
             <div className="rounded-md bg-blue-600 text-white p-1.5">
@@ -134,6 +135,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
         
+        {/* Navigation Links */}
         <div className="overflow-y-auto h-[calc(100vh-4rem)]">
           <nav className="px-4 py-4 space-y-1">
             {navigation.map((item, index) => {
@@ -187,6 +189,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           </nav>
         </div>
         
+        {/* Logout Button */}
         <div className="absolute bottom-0 w-full p-4 border-t border-gray-700">
           <button
             onClick={() => {
