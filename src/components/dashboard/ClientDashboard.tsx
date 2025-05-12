@@ -3,10 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../../lib/store';
 import { supabase } from '../../lib/supabase';
 import { Button } from '../ui/Button';
-import { 
-  Users, UserCheck, UserMinus, Clock, Plus, 
-  LayoutKanban, MessageSquare, Loader2, ChevronRight 
-} from 'lucide-react';
+import { Users, UserCheck, UserMinus, Clock, Plus, Kanban as LayoutKanban, MessageSquare, Loader2, ChevronRight } from 'lucide-react';
 import type { Lead, Followup } from '../../lib/types';
 
 interface DashboardStats {
