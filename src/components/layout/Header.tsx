@@ -14,10 +14,16 @@ export const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   
   const getPageTitle = () => {
     const path = location.pathname;
-    if (path === '/dashboard') return 'Dashboard';
-    if (path === '/admin') return 'Admin Panel';
-    if (path === '/expired') return 'Subscription Expired';
-    return 'ConectaLead';
+    const titles: Record<string, string> = {
+      '/dashboard': 'Dashboard',
+      '/kanban': 'Kanban de Leads',
+      '/followups': 'Follow-up',
+      '/reports': 'Relatórios',
+      '/preferences': 'Minhas Preferências',
+      '/profile': 'Perfil',
+      '/support': 'Suporte'
+    };
+    return titles[path] || 'ConectaLead';
   };
 
   return (
@@ -49,10 +55,10 @@ export const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
           {user && (
             <div className="flex items-center">
               <div className="text-right mr-4">
-                <p className="text-sm font-medium text-gray-900">{user.email}</p>
-                <p className="text-xs text-gray-500">
-                  {isAdmin ? 'Administrator' : client?.name || 'Client'}
+                <p className="text-sm font-medium text-gray-900">
+                  {isAdmin ? 'Administrador' : client?.name}
                 </p>
+                <p className="text-xs text-gray-500">{user.email}</p>
               </div>
               
               <Button 
@@ -61,7 +67,7 @@ export const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
                 onClick={() => logout()}
                 icon={<LogOut className="h-4 w-4" />}
               >
-                <span className="hidden md:inline">Logout</span>
+                <span className="hidden md:inline">Sair</span>
               </Button>
             </div>
           )}

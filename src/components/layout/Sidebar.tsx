@@ -2,9 +2,9 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../lib/store';
 import { 
-  LayoutDashboard, Users, LogOut, X, MessageSquare, Calendar, 
-  DollarSign, CreditCard, Kanban as LayoutKanban, Settings,
-  BarChart
+  LayoutDashboard, Users, LogOut, X, MessageSquare, 
+  BarChart2, Settings, HelpCircle, User, Kanban,
+  Eye
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -15,23 +15,58 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const location = useLocation();
   const { isAdmin, logout } = useAppStore();
-  
-  const navigationItems = [
+
+  const clientNavigation = [
     {
       name: 'Dashboard',
       path: '/dashboard',
       icon: <LayoutDashboard className="w-5 h-5" />,
-      show: true,
     },
     {
-      name: 'Follow-up Messenger',
+      name: 'Kanban de Leads',
+      path: '/kanban',
+      icon: <Kanban className="w-5 h-5" />,
+    },
+    {
+      name: 'Follow-up',
       path: '/followups',
       icon: <MessageSquare className="w-5 h-5" />,
-      show: !isAdmin,
+    },
+    {
+      name: 'Relatórios',
+      path: '/reports',
+      icon: <BarChart2 className="w-5 h-5" />,
+    },
+    {
+      name: 'Minha Visualização',
+      path: '/preferences',
+      icon: <Eye className="w-5 h-5" />,
+    },
+    {
+      group: 'Configurações',
+      items: [
+        {
+          name: 'Perfil',
+          path: '/profile',
+          icon: <User className="w-5 h-5" />,
+        },
+        {
+          name: 'Suporte',
+          path: '/support',
+          icon: <HelpCircle className="w-5 h-5" />,
+        }
+      ]
+    }
+  ];
+
+  const adminNavigation = [
+    {
+      name: 'Dashboard',
+      path: '/dashboard',
+      icon: <LayoutDashboard className="w-5 h-5" />,
     },
     {
       group: 'Administração',
-      show: isAdmin,
       items: [
         {
           name: 'Gestão de Clientes',
@@ -41,48 +76,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         {
           name: 'Visualizar Kanban',
           path: '/admin/kanban',
-          icon: <LayoutKanban className="w-5 h-5" />,
+          icon: <Kanban className="w-5 h-5" />,
         }
       ]
     },
     {
       group: 'Financeiro',
-      show: isAdmin,
       items: [
         {
           name: 'Previsão de Cobranças',
           path: '/admin/forecast',
-          icon: <Calendar className="w-5 h-5" />,
+          icon: <BarChart2 className="w-5 h-5" />,
         },
         {
           name: 'Controle de Pagamentos',
           path: '/admin/payments',
-          icon: <DollarSign className="w-5 h-5" />,
-        },
-        {
-          name: 'Automação de Cobrança',
-          path: '/admin/billing',
-          icon: <CreditCard className="w-5 h-5" />,
-        },
-        {
-          name: 'Relatório de Recorrência',
-          path: '/admin/recurrence',
-          icon: <BarChart className="w-5 h-5" />,
-        },
-        {
-          name: 'Configuração Geral',
-          path: '/admin/config',
           icon: <Settings className="w-5 h-5" />,
         }
       ]
     }
   ];
 
-  const handleOverlayClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
+  const navigation = isAdmin ? adminNavigation : clientNavigation;
 
   return (
     <>
@@ -90,7 +105,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       {isOpen && (
         <div 
           className="fixed inset-0 bg-gray-600 bg-opacity-75 z-20 lg:hidden"
-          onClick={handleOverlayClick}
+          onClick={onClose}
         />
       )}
       
@@ -110,7 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         
         <div className="p-4">
           <nav className="space-y-1">
-            {navigationItems.filter(item => item.show).map((item, index) => {
+            {navigation.map((item, index) => {
               if ('group' in item) {
                 return (
                   <div key={index} className="pt-4">

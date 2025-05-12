@@ -48,7 +48,12 @@ function App() {
         <Route element={<Layout />}>
           {/* Common routes */}
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/kanban" element={<Dashboard />} />
           <Route path="/followups" element={<Followups />} />
+          <Route path="/reports" element={<Dashboard />} />
+          <Route path="/preferences" element={<Dashboard />} />
+          <Route path="/profile" element={<Dashboard />} />
+          <Route path="/support" element={<Dashboard />} />
           <Route path="/expired" element={<Expired />} />
           
           {/* Admin routes */}

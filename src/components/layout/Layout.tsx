@@ -18,7 +18,7 @@ export const Layout: React.FC = () => {
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center">
           <Loader2 className="h-12 w-12 mx-auto text-blue-600 animate-spin" />
-          <p className="mt-4 text-lg text-gray-600">Loading...</p>
+          <p className="mt-4 text-lg text-gray-600">Carregando...</p>
         </div>
       </div>
     );
