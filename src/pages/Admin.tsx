@@ -1,7 +1,6 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAppStore } from '../lib/store';
-import { AdminDashboard } from '../components/admin/AdminDashboard';
 import { ClientList } from '../components/admin/ClientList';
 
 export const Admin: React.FC = () => {
@@ -12,8 +11,8 @@ export const Admin: React.FC = () => {
   }
 
   return (
-    <div className="space-y-8">
-      <AdminDashboard />
+    <div>
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">Client Management</h2>
       <ClientList />
     </div>
   );
