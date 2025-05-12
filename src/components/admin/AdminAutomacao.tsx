@@ -35,11 +35,11 @@ export const AdminAutomacao: React.FC = () => {
       if (error) throw error;
       setClients(data || []);
     } catch (error) {
-      console.error('Error fetching clients:', error);
+      console.error('Erro ao buscar clientes:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to load clients data.",
+        title: "Erro",
+        description: "Não foi possível carregar os dados dos clientes.",
       });
     } finally {
       setIsLoading(false);
@@ -63,17 +63,17 @@ export const AdminAutomacao: React.FC = () => {
       if (error) throw error;
 
       toast({
-        title: "Updated successfully",
-        description: "Client automation settings have been saved.",
+        title: "Atualizado com sucesso",
+        description: "As configurações de automação foram salvas.",
       });
 
       fetchClients();
     } catch (error) {
-      console.error('Error updating client:', error);
+      console.error('Erro ao atualizar cliente:', error);
       toast({
         variant: "destructive",
-        title: "Error",
-        description: "Failed to update client settings.",
+        title: "Erro",
+        description: "Não foi possível atualizar as configurações.",
       });
     }
   };
@@ -111,6 +111,15 @@ export const AdminAutomacao: React.FC = () => {
     return daysUntilDue >= 0 && daysUntilDue <= 3;
   };
 
+  const translatePlanType = (planType: string) => {
+    const translations = {
+      'mensal': 'Mensal',
+      'trimestral': 'Trimestral',
+      'anual': 'Anual'
+    };
+    return translations[planType as keyof typeof translations] || planType;
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -122,8 +131,8 @@ export const AdminAutomacao: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-800">Billing Automation</h2>
-        <p className="text-gray-600 mt-1">Manage automated billing notifications for clients</p>
+        <h2 className="text-2xl font-bold text-gray-800">Automação de Cobrança</h2>
+        <p className="text-gray-600 mt-1">Gerencie as notificações automáticas de cobrança para os clientes</p>
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
@@ -132,7 +141,7 @@ export const AdminAutomacao: React.FC = () => {
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
               type="text"
-              placeholder="Search clients..."
+              placeholder="Buscar clientes..."
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -144,10 +153,10 @@ export const AdminAutomacao: React.FC = () => {
             value={planFilter}
             onChange={(e) => setPlanFilter(e.target.value)}
           >
-            <option value="">All plans</option>
-            <option value="mensal">Monthly</option>
-            <option value="trimestral">Quarterly</option>
-            <option value="anual">Annual</option>
+            <option value="">Todos os planos</option>
+            <option value="mensal">Mensal</option>
+            <option value="trimestral">Trimestral</option>
+            <option value="anual">Anual</option>
           </select>
 
           <select
@@ -155,9 +164,9 @@ export const AdminAutomacao: React.FC = () => {
             value={automationFilter}
             onChange={(e) => setAutomationFilter(e.target.value as 'all' | 'enabled' | 'disabled')}
           >
-            <option value="all">All automation status</option>
-            <option value="enabled">Automation enabled</option>
-            <option value="disabled">Automation disabled</option>
+            <option value="all">Todos os status</option>
+            <option value="enabled">Automação ativada</option>
+            <option value="disabled">Automação desativada</option>
           </select>
         </div>
       </div>
@@ -167,25 +176,25 @@ export const AdminAutomacao: React.FC = () => {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Client
+                Cliente
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Plan
+                Plano
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Due Date
+                Vencimento
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 WhatsApp
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Message
+                Mensagem
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Automation
+                Automação
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
+                Ações
               </th>
             </tr>
           </thead>
@@ -202,7 +211,7 @@ export const AdminAutomacao: React.FC = () => {
                   <div className="text-sm font-medium text-gray-900">{client.name}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{client.plan_type}</div>
+                  <div className="text-sm text-gray-900">{translatePlanType(client.plan_type)}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   {editingClient === client.id ? (
@@ -224,7 +233,7 @@ export const AdminAutomacao: React.FC = () => {
                   ) : (
                     <div className="flex items-center text-sm text-gray-900">
                       <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                      Day {client.billing_day}
+                      Dia {client.billing_day}
                     </div>
                   )}
                 </td>
@@ -245,7 +254,7 @@ export const AdminAutomacao: React.FC = () => {
                   ) : (
                     <div className="flex items-center text-sm text-gray-900">
                       <Whatsapp className="h-4 w-4 text-green-500 mr-1" />
-                      {client.whatsapp || 'Not set'}
+                      {client.whatsapp || 'Não configurado'}
                     </div>
                   )}
                 </td>
@@ -263,10 +272,11 @@ export const AdminAutomacao: React.FC = () => {
                       }}
                       className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                       rows={2}
+                      placeholder="Digite a mensagem de cobrança..."
                     />
                   ) : (
                     <div className="text-sm text-gray-900 max-w-md truncate">
-                      {client.billing_message || 'Default message'}
+                      {client.billing_message || 'Mensagem padrão'}
                     </div>
                   )}
                 </td>
@@ -296,7 +306,7 @@ export const AdminAutomacao: React.FC = () => {
                         size="sm"
                         onClick={() => setEditingClient(null)}
                       >
-                        Cancel
+                        Cancelar
                       </Button>
                       <Button
                         variant="primary"
@@ -304,7 +314,7 @@ export const AdminAutomacao: React.FC = () => {
                         onClick={() => handleSaveChanges(client)}
                         icon={<CheckCircle className="h-4 w-4" />}
                       >
-                        Save
+                        Salvar
                       </Button>
                     </div>
                   ) : (
@@ -314,7 +324,7 @@ export const AdminAutomacao: React.FC = () => {
                       onClick={() => setEditingClient(client.id)}
                       icon={<MessageSquare className="h-4 w-4" />}
                     >
-                      Edit
+                      Editar
                     </Button>
                   )}
                 </td>

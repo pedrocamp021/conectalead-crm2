@@ -21,9 +21,9 @@ export const Admin: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold text-gray-800">
-          {view === 'clients' && 'Client Management'}
-          {view === 'kanban' && 'Kanban Overview'}
-          {view === 'automation' && 'Billing Automation'}
+          {view === 'clients' && 'Gestão de Clientes'}
+          {view === 'kanban' && 'Visão Geral do Kanban'}
+          {view === 'automation' && 'Automação de Cobrança'}
         </h2>
         
         <div className="flex space-x-2">
@@ -32,7 +32,7 @@ export const Admin: React.FC = () => {
             onClick={() => setView('clients')}
             icon={<Users className="h-4 w-4" />}
           >
-            Clients
+            Clientes
           </Button>
           <Button
             variant={view === 'kanban' ? 'primary' : 'ghost'}
@@ -46,7 +46,7 @@ export const Admin: React.FC = () => {
             onClick={() => setView('automation')}
             icon={<BellRing className="h-4 w-4" />}
           >
-            Automation
+            Automação
           </Button>
         </div>
       </div>

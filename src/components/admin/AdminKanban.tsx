@@ -22,7 +22,7 @@ export const AdminKanban: React.FC = () => {
         if (error) throw error;
         setClients(data || []);
       } catch (error) {
-        console.error('Error fetching clients:', error);
+        console.error('Erro ao buscar clientes:', error);
       } finally {
         setIsLoading(false);
       }
@@ -45,7 +45,7 @@ export const AdminKanban: React.FC = () => {
       <div className="flex items-center justify-center h-[calc(100vh-200px)]">
         <div className="text-center">
           <Loader2 className="h-8 w-8 mx-auto text-blue-600 animate-spin" />
-          <p className="mt-2 text-gray-600">Loading clients...</p>
+          <p className="mt-2 text-gray-600">Carregando clientes...</p>
         </div>
       </div>
     );
@@ -54,8 +54,8 @@ export const AdminKanban: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-800">Client Kanban View</h2>
-        <p className="text-gray-600 mt-1">Select a client to view their Kanban board</p>
+        <h2 className="text-2xl font-bold text-gray-800">Visualização do Kanban</h2>
+        <p className="text-gray-600 mt-1">Selecione um cliente para visualizar seu quadro Kanban</p>
       </div>
 
       <div className="relative">
@@ -66,7 +66,7 @@ export const AdminKanban: React.FC = () => {
             value={selectedClient?.id || ''}
             onChange={(e) => handleClientChange(e.target.value)}
           >
-            <option value="">Select a client...</option>
+            <option value="">Selecione um cliente...</option>
             {clients.map((client) => (
               <option key={client.id} value={client.id}>
                 {client.name}
@@ -81,10 +81,10 @@ export const AdminKanban: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="mb-6">
             <h3 className="text-xl font-semibold text-gray-800">
-              {selectedClient.name}'s Kanban Board
+              Quadro Kanban de {selectedClient.name}
             </h3>
             <p className="text-sm text-gray-500 mt-1">
-              View-only mode - Changes can only be made from the client's account
+              Modo somente visualização - Alterações só podem ser feitas na conta do cliente
             </p>
           </div>
 
@@ -94,10 +94,10 @@ export const AdminKanban: React.FC = () => {
         <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-12 text-center">
           <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No Client Selected
+            Nenhum Cliente Selecionado
           </h3>
           <p className="text-gray-500">
-            Select a client from the dropdown above to view their Kanban board
+            Selecione um cliente acima para visualizar seu quadro Kanban
           </p>
         </div>
       )}
