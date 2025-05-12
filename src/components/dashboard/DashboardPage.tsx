@@ -29,16 +29,32 @@ export const DashboardPage: React.FC = () => {
 
         const currentDate = new Date();
         
+        // Calcular status dos clientes
+        const activeClients = clients.filter(client => 
+          client.is_active && new Date(client.plan_expiry) > currentDate
+        ).length;
+
+        const inactiveClients = clients.filter(client => 
+          !client.is_active
+        ).length;
+
+        const expiredClients = clients.filter(client => 
+          new Date(client.plan_expiry) <= currentDate
+        ).length;
+
+        // Calcular distribuição de planos
+        const planDistribution = {
+          monthly: clients.filter(client => client.plan_type === 'monthly').length,
+          quarterly: clients.filter(client => client.plan_type === 'quarterly').length,
+          yearly: clients.filter(client => client.plan_type === 'yearly').length
+        };
+
         const stats = {
           totalClients: clients.length,
-          activeClients: clients.filter(client => client.status === 'active').length,
-          inactiveClients: clients.filter(client => client.status === 'inactive').length,
-          expiredClients: clients.filter(client => new Date(client.expiration_date) < currentDate).length,
-          planDistribution: {
-            monthly: clients.filter(client => client.plan_type === 'monthly').length,
-            quarterly: clients.filter(client => client.plan_type === 'quarterly').length,
-            yearly: clients.filter(client => client.plan_type === 'yearly').length
-          }
+          activeClients,
+          inactiveClients,
+          expiredClients,
+          planDistribution
         };
 
         setStats(stats);

@@ -19,7 +19,7 @@ export const DashboardCharts: React.FC<DashboardChartsProps> = ({ stats, isLoadi
   const statusData: ClientStatusData[] = [
     { name: 'Ativo', value: stats.activeClients, color: '#22c55e' },
     { name: 'Inativo', value: stats.inactiveClients, color: '#eab308' },
-    { name: 'Expirado', value: stats.expiredClients, color: '#ef4444' },
+    { name: 'Vencido', value: stats.expiredClients, color: '#ef4444' },
   ];
 
   const planData: PlanDistributionData[] = [
