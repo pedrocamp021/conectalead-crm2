@@ -141,13 +141,13 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Cadastrar Novo Cliente</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto">
-          <div className="space-y-4 px-1 py-4 pb-6">
+          <div className="space-y-4 px-1 py-4 pb-24">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 label="Nome da Empresa *"
@@ -278,7 +278,7 @@ export const AddClientModal: React.FC<AddClientModalProps> = ({
             </div>
           </div>
 
-          <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-gray-200 bg-white sticky bottom-0">
+          <div className="flex justify-end space-x-2 pt-4 mt-4 border-t border-gray-200 bg-white sticky bottom-0 px-6 pb-4">
             <Button
               variant="ghost"
               onClick={onClose}
