@@ -5,8 +5,9 @@ import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
-import { Loader2, Plus, Calendar, MessageSquare, Clock, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
-import type { Followup } from '../lib/types';
+import { BulkScheduleModal } from '../components/followup/BulkScheduleModal';
+import { Loader2, Plus, Calendar, MessageSquare, Clock, Edit, Trash2, CheckCircle, XCircle, Users } from 'lucide-react';
+import type { Followup, Lead } from '../lib/types';
 
 type StatusFilter = 'all' | 'scheduled' | 'sent' | 'cancelled';
 
@@ -20,6 +21,7 @@ export const Followups: React.FC = () => {
   const [selectedLead, setSelectedLead] = useState<any>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [editingFollowup, setEditingFollowup] = useState<Followup | null>(null);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [newFollowup, setNewFollowup] = useState({
     message: '',
     scheduledFor: '',
@@ -97,6 +99,27 @@ export const Followups: React.FC = () => {
     }
   };
 
+  const handleBulkSchedule = async (leads: Lead[], message: string, date: string) => {
+    try {
+      const followups = leads.map(lead => ({
+        lead_id: lead.id,
+        message_template: message,
+        scheduled_for: date,
+        status: 'scheduled'
+      }));
+
+      const { error } = await supabase
+        .from('followups')
+        .insert(followups);
+
+      if (error) throw error;
+
+      await fetchFollowups();
+    } catch (error) {
+      console.error('Erro ao agendar mensagens em massa:', error);
+    }
+  };
+
   const handleEditFollowup = async () => {
     if (!editingFollowup) return;
 
@@ -166,9 +189,19 @@ export const Followups: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">Follow-up Messenger</h1>
-        <p className="text-gray-600">Gerencie suas mensagens agendadas</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">Follow-up Messenger</h1>
+          <p className="text-gray-600">Gerencie suas mensagens agendadas</p>
+        </div>
+        
+        <Button
+          variant="primary"
+          onClick={() => setIsBulkModalOpen(true)}
+          icon={<Users className="w-4 h-4" />}
+        >
+          Agendar em Massa
+        </Button>
       </div>
 
       {selectedLead && (
@@ -338,6 +371,15 @@ export const Followups: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {client && (
+        <BulkScheduleModal
+          open={isBulkModalOpen}
+          onClose={() => setIsBulkModalOpen(false)}
+          onSchedule={handleBulkSchedule}
+          clientId={client.id}
+        />
+      )}
     </div>
   );
 };
