@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Column, Lead } from '../../lib/types';
 import { KanbanCard } from './KanbanCard';
 import { useAppStore } from '../../lib/store';
@@ -24,18 +24,66 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
   readOnly = false
 }) => {
   const [isAddingCard, setIsAddingCard] = useState(false);
-  const [isEditingColumn, setIsEditingColumn] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [columnName, setColumnName] = useState(column.name);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { fetchColumnsAndLeads, addLead, client } = useAppStore();
+  const { toast } = useToast();
   const [newLead, setNewLead] = useState({
     name: '',
     phone: '',
     interest: '',
     notes: ''
   });
-  const [columnName, setColumnName] = useState(column.name);
-  
-  const { addLead, client } = useAppStore();
-  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isEditing && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [isEditing]);
+
+  const handleSaveColumnName = async () => {
+    if (!columnName.trim() || columnName === column.name) {
+      setColumnName(column.name);
+      setIsEditing(false);
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('columns')
+        .update({ name: columnName })
+        .eq('id', column.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Coluna atualizada",
+        description: "O nome da coluna foi alterado com sucesso.",
+      });
+
+      fetchColumnsAndLeads(client?.id);
+    } catch (error) {
+      console.error('Erro ao atualizar coluna:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível atualizar a coluna.",
+      });
+      setColumnName(column.name);
+    }
+    setIsEditing(false);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveColumnName();
+    } else if (e.key === 'Escape') {
+      setColumnName(column.name);
+      setIsEditing(false);
+    }
+  };
 
   const handleAddLead = async () => {
     if (!newLead.name || !newLead.phone) return;
@@ -56,36 +104,6 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
     setIsAddingCard(false);
   };
 
-  const handleUpdateColumn = async () => {
-    if (!columnName.trim() || columnName === column.name) {
-      setIsEditingColumn(false);
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('columns')
-        .update({ name: columnName })
-        .eq('id', column.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Coluna atualizada",
-        description: "O nome da coluna foi alterado com sucesso.",
-      });
-
-      setIsEditingColumn(false);
-    } catch (error) {
-      console.error('Erro ao atualizar coluna:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível atualizar a coluna.",
-      });
-    }
-  };
-
   const handleDeleteColumn = async () => {
     try {
       const { error } = await supabase
@@ -99,6 +117,8 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
         title: "Coluna excluída",
         description: "A coluna foi removida com sucesso.",
       });
+
+      fetchColumnsAndLeads(client?.id);
     } catch (error) {
       console.error('Erro ao excluir coluna:', error);
       toast({
@@ -139,14 +159,15 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
             {...provided.dragHandleProps}
           >
             <div className="flex justify-between items-center">
-              {isEditingColumn ? (
+              {isEditing ? (
                 <input
+                  ref={inputRef}
                   type="text"
                   value={columnName}
                   onChange={(e) => setColumnName(e.target.value)}
-                  onBlur={handleUpdateColumn}
-                  onKeyPress={(e) => e.key === 'Enter' && handleUpdateColumn()}
-                  className="bg-transparent border-none outline-none text-white placeholder-white"
+                  onBlur={handleSaveColumnName}
+                  onKeyDown={handleKeyPress}
+                  className="bg-white bg-opacity-20 px-2 py-1 rounded text-white placeholder-white w-full mr-2 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50"
                   placeholder="Nome da coluna"
                 />
               ) : (
@@ -170,7 +191,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
                           className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-100 flex items-center"
                           onClick={() => {
                             setShowMenu(false);
-                            setIsEditingColumn(true);
+                            setIsEditing(true);
                           }}
                         >
                           <Edit className="h-4 w-4 mr-2" />
@@ -291,4 +312,4 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
 
 export default KanbanColumn;
 
-export { KanbanColumn }
+export { KanbanColumn };
