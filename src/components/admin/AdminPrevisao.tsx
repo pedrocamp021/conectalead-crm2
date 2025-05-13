@@ -2,24 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../ui/use-toast';
 import { Button } from '../ui/Button';
-import { Calendar, Filter, Download, Loader2, AlertCircle, DollarSign } from 'lucide-react';
+import { Search, Filter, Download, Loader2, AlertCircle, DollarSign } from 'lucide-react';
 
 interface Client {
   id: string;
   name: string;
-  plan_type: string;
   status: string;
+  data_pagamento_atual: string | null;
+  data_pagamento_real: string | null;
+  proxima_data_pagamento: string | null;
+  pagamento_confirmado: boolean;
   initial_fee: number;
   monthly_fee: number;
-  proxima_data_pagamento: string | null;
-  data_pagamento_real: string | null;
-  pagamento_confirmado: boolean;
-}
-
-interface BillingGroup {
-  day: number;
-  clients: Client[];
-  totalAmount: number;
 }
 
 interface FilterState {
@@ -66,61 +60,71 @@ export const AdminPrevisao: React.FC = () => {
 
   useEffect(() => {
     fetchClients();
+
+    // Subscribe to realtime changes
+    const subscription = supabase
+      .channel('clients_changes')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'clients' 
+      }, () => {
+        fetchClients();
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
-
-  const filteredClients = clients.filter(client => {
-    const matchesName = client.name.toLowerCase().includes(filters.name.toLowerCase());
-    const matchesStatus = !filters.status || getClientStatus(client) === filters.status;
-    const matchesDateRange = (!filters.dateRange.start || !client.proxima_data_pagamento || 
-      new Date(client.proxima_data_pagamento) >= new Date(filters.dateRange.start)) &&
-      (!filters.dateRange.end || !client.proxima_data_pagamento || 
-      new Date(client.proxima_data_pagamento) <= new Date(filters.dateRange.end));
-    const matchesBillingType = filters.billingType === 'all' || 
-      (filters.billingType === 'initial' && !client.data_pagamento_real) ||
-      (filters.billingType === 'recurring' && client.data_pagamento_real);
-
-    return matchesName && matchesStatus && matchesDateRange && matchesBillingType;
-  });
-
-  const getClientStatus = (client: Client): string => {
-    if (client.pagamento_confirmado) return 'pago';
-    if (!client.proxima_data_pagamento) return 'pendente';
-    
-    const today = new Date();
-    const dueDate = new Date(client.proxima_data_pagamento);
-    const diffDays = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    return diffDays > 4 ? 'inativo' : 'pendente';
-  };
 
   const getCurrentMonthStats = () => {
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
+    const nextMonth = new Date(currentYear, currentMonth + 1, 1);
 
-    const monthlyClients = clients.filter(client => {
-      if (!client.proxima_data_pagamento) return false;
-      const dueDate = new Date(client.proxima_data_pagamento);
-      return dueDate.getMonth() === currentMonth && dueDate.getFullYear() === currentYear;
-    });
+    // Received amount this month
+    const receivedAmount = clients
+      .filter(client => {
+        const paymentDate = client.data_pagamento_real || client.data_pagamento_atual;
+        if (!paymentDate || !client.pagamento_confirmado) return false;
+        const date = new Date(paymentDate);
+        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+      })
+      .reduce((sum, client) => {
+        return sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee);
+      }, 0);
 
-    const paidAmount = monthlyClients
-      .filter(client => client.pagamento_confirmado)
-      .reduce((sum, client) => sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee), 0);
+    // Amount to receive this month
+    const pendingAmount = clients
+      .filter(client => {
+        if (!client.proxima_data_pagamento || client.pagamento_confirmado) return false;
+        const dueDate = new Date(client.proxima_data_pagamento);
+        return dueDate.getMonth() === currentMonth && dueDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, client) => {
+        return sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee);
+      }, 0);
 
-    const pendingAmount = monthlyClients
-      .filter(client => !client.pagamento_confirmado)
-      .reduce((sum, client) => sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee), 0);
+    // Next month forecast
+    const nextMonthForecast = clients
+      .filter(client => {
+        if (!client.proxima_data_pagamento || client.status !== 'ativo') return false;
+        const dueDate = new Date(client.proxima_data_pagamento);
+        return dueDate < nextMonth;
+      })
+      .reduce((sum, client) => sum + client.monthly_fee, 0);
 
     return {
-      totalPaid: paidAmount,
-      totalPending: pendingAmount,
-      total: paidAmount + pendingAmount
+      received: receivedAmount,
+      pending: pendingAmount,
+      nextMonth: nextMonthForecast
     };
   };
 
-  const groupClientsByDay = (clients: Client[]): BillingGroup[] => {
-    const groups: { [key: number]: { clients: Client[], totalAmount: number } } = {};
+  const groupClientsByDay = () => {
+    const groups: { [key: number]: Client[] } = {};
     
     clients.forEach(client => {
       if (!client.proxima_data_pagamento) return;
@@ -129,19 +133,19 @@ export const AdminPrevisao: React.FC = () => {
       const day = dueDate.getDate();
       
       if (!groups[day]) {
-        groups[day] = { clients: [], totalAmount: 0 };
+        groups[day] = [];
       }
       
-      const amount = client.data_pagamento_real ? client.monthly_fee : client.initial_fee;
-      groups[day].clients.push(client);
-      groups[day].totalAmount += amount;
+      groups[day].push(client);
     });
 
     return Object.entries(groups)
-      .map(([day, data]) => ({
+      .map(([day, clients]) => ({
         day: parseInt(day),
-        clients: data.clients,
-        totalAmount: data.totalAmount
+        clients,
+        totalAmount: clients.reduce((sum, client) => {
+          return sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee);
+        }, 0)
       }))
       .sort((a, b) => a.day - b.day);
   };
@@ -166,7 +170,7 @@ export const AdminPrevisao: React.FC = () => {
       client.name,
       client.data_pagamento_real ? 'Recorrente' : 'Primeira Mensalidade',
       client.proxima_data_pagamento ? new Date(client.proxima_data_pagamento).toLocaleDateString() : '-',
-      getClientStatus(client),
+      client.status,
       formatCurrency(client.data_pagamento_real ? client.monthly_fee : client.initial_fee)
     ]);
 
@@ -185,6 +189,20 @@ export const AdminPrevisao: React.FC = () => {
     link.click();
     document.body.removeChild(link);
   };
+
+  const filteredClients = clients.filter(client => {
+    const matchesSearch = client.name.toLowerCase().includes(filters.name.toLowerCase());
+    const matchesStatus = !filters.status || client.status === filters.status;
+    const matchesDate = (!filters.dateRange.start || !client.proxima_data_pagamento || 
+      new Date(client.proxima_data_pagamento) >= new Date(filters.dateRange.start)) &&
+      (!filters.dateRange.end || !client.proxima_data_pagamento || 
+      new Date(client.proxima_data_pagamento) <= new Date(filters.dateRange.end));
+    const matchesBillingType = filters.billingType === 'all' || 
+      (filters.billingType === 'initial' && !client.data_pagamento_real) ||
+      (filters.billingType === 'recurring' && client.data_pagamento_real);
+
+    return matchesSearch && matchesStatus && matchesDate && matchesBillingType;
+  });
 
   if (isLoading) {
     return (
@@ -222,7 +240,7 @@ export const AdminPrevisao: React.FC = () => {
             <div>
               <p className="text-sm text-gray-500">Valor Recebido (Mês Atual)</p>
               <h3 className="text-2xl font-bold text-green-600">
-                {formatCurrency(monthlyStats.totalPaid)}
+                {formatCurrency(monthlyStats.received)}
               </h3>
             </div>
             <DollarSign className="h-8 w-8 text-green-500" />
@@ -234,7 +252,7 @@ export const AdminPrevisao: React.FC = () => {
             <div>
               <p className="text-sm text-gray-500">A Receber (Mês Atual)</p>
               <h3 className="text-2xl font-bold text-blue-600">
-                {formatCurrency(monthlyStats.totalPending)}
+                {formatCurrency(monthlyStats.pending)}
               </h3>
             </div>
             <DollarSign className="h-8 w-8 text-blue-500" />
@@ -244,9 +262,9 @@ export const AdminPrevisao: React.FC = () => {
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Previsto (Mês Atual)</p>
+              <p className="text-sm text-gray-500">Previsão (Próximo Mês)</p>
               <h3 className="text-2xl font-bold text-gray-900">
-                {formatCurrency(monthlyStats.total)}
+                {formatCurrency(monthlyStats.nextMonth)}
               </h3>
             </div>
             <DollarSign className="h-8 w-8 text-gray-500" />
@@ -271,7 +289,7 @@ export const AdminPrevisao: React.FC = () => {
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
           >
             <option value="">Todos os status</option>
-            <option value="pago">Pago</option>
+            <option value="ativo">Ativo</option>
             <option value="pendente">Pendente</option>
             <option value="inativo">Inativo</option>
           </select>
@@ -318,11 +336,11 @@ export const AdminPrevisao: React.FC = () => {
         </div>
 
         <div className="divide-y divide-gray-200">
-          {groupClientsByDay(filteredClients).map(group => (
+          {groupClientsByDay().map(group => (
             <div key={group.day} className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center">
-                  <Calendar className="h-5 w-5 text-gray-400 mr-2" />
+                  <DollarSign className="h-5 w-5 text-gray-400 mr-2" />
                   <h4 className="text-lg font-medium text-gray-900">
                     Dia {group.day}
                   </h4>
@@ -354,11 +372,11 @@ export const AdminPrevisao: React.FC = () => {
                         </span>
                         <span className={`
                           px-2 py-0.5 rounded-full text-xs font-medium
-                          ${getClientStatus(client) === 'pago' ? 'bg-green-100 text-green-800' : 
-                            getClientStatus(client) === 'pendente' ? 'bg-yellow-100 text-yellow-800' : 
+                          ${client.status === 'ativo' ? 'bg-green-100 text-green-800' : 
+                            client.status === 'pendente' ? 'bg-yellow-100 text-yellow-800' : 
                             'bg-red-100 text-red-800'}
                         `}>
-                          {getClientStatus(client)}
+                          {client.status}
                         </span>
                       </div>
                     </div>
