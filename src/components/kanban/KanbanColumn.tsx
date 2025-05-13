@@ -8,25 +8,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/Input';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../ui/use-toast';
-import { Draggable } from 'react-beautiful-dnd';
+import { Draggable, Droppable } from 'react-beautiful-dnd';
 
 interface KanbanColumnProps {
   column: Column;
   index: number;
-  onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
-  onDrop: (e: React.DragEvent<HTMLDivElement>, columnId: string) => void;
-  onDragStart: (e: React.DragEvent<HTMLDivElement>, leadId: string) => void;
-  onDelete: (columnId: string) => void;
+  onLeadDrop?: (leadId: string, newColumnId: string) => void;
   readOnly?: boolean;
 }
 
-export const KanbanColumn: React.FC<KanbanColumnProps> = ({
+const KanbanColumn: React.FC<KanbanColumnProps> = ({
   column,
   index,
-  onDragOver,
-  onDrop,
-  onDragStart,
-  onDelete,
+  onLeadDrop,
   readOnly = false
 }) => {
   const [isAddingCard, setIsAddingCard] = useState(false);
@@ -92,6 +86,29 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
     }
   };
 
+  const handleDeleteColumn = async () => {
+    try {
+      const { error } = await supabase
+        .from('columns')
+        .delete()
+        .eq('id', column.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Coluna excluída",
+        description: "A coluna foi removida com sucesso.",
+      });
+    } catch (error) {
+      console.error('Erro ao excluir coluna:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível excluir a coluna.",
+      });
+    }
+  };
+
   const getColumnHeaderColor = () => {
     const colorClasses: Record<string, string> = {
       'blue': 'bg-blue-500',
@@ -122,7 +139,19 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
             {...provided.dragHandleProps}
           >
             <div className="flex justify-between items-center">
-              <h3 className="font-semibold">{column.name}</h3>
+              {isEditingColumn ? (
+                <input
+                  type="text"
+                  value={columnName}
+                  onChange={(e) => setColumnName(e.target.value)}
+                  onBlur={handleUpdateColumn}
+                  onKeyPress={(e) => e.key === 'Enter' && handleUpdateColumn()}
+                  className="bg-transparent border-none outline-none text-white placeholder-white"
+                  placeholder="Nome da coluna"
+                />
+              ) : (
+                <h3 className="font-semibold">{column.name}</h3>
+              )}
               <div className="flex items-center space-x-1">
                 <span className="text-sm bg-white bg-opacity-25 px-2 py-0.5 rounded-full">
                   {column.leads?.length || 0}
@@ -151,7 +180,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
                           className="w-full px-4 py-2 text-left text-red-600 hover:bg-gray-100 flex items-center"
                           onClick={() => {
                             setShowMenu(false);
-                            onDelete(column.id);
+                            handleDeleteColumn();
                           }}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
@@ -165,109 +194,95 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
             </div>
           </div>
           
-          <div 
-            className="p-2 flex-1 overflow-y-auto"
-            onDragOver={onDragOver}
-            onDrop={(e) => onDrop(e, column.id)}
-          >
-            {column.leads?.map((lead) => (
-              <KanbanCard 
-                key={lead.id} 
-                lead={lead} 
-                onDragStart={onDragStart}
-                readOnly={readOnly}
-              />
-            ))}
-            
-            {!readOnly && isAddingCard ? (
-              <div className="bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-2">
-                <div className="space-y-2">
-                  <input
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                    value={newLead.name}
-                    onChange={(e) => setNewLead({...newLead, name: e.target.value})}
-                    placeholder="Nome *"
-                  />
-                  <input
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                    value={newLead.phone}
-                    onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
-                    placeholder="Telefone *"
-                  />
-                  <input
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                    value={newLead.interest}
-                    onChange={(e) => setNewLead({...newLead, interest: e.target.value})}
-                    placeholder="Interesse"
-                  />
-                  <textarea
-                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
-                    value={newLead.notes}
-                    onChange={(e) => setNewLead({...newLead, notes: e.target.value})}
-                    placeholder="Observações"
-                    rows={2}
-                  />
-                  <div className="flex justify-end space-x-2 pt-2">
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => setIsAddingCard(false)}
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      variant="primary" 
-                      size="sm" 
-                      onClick={handleAddLead}
-                      disabled={!newLead.name || !newLead.phone}
-                    >
-                      Salvar
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ) : !readOnly && (
-              <button
-                onClick={() => setIsAddingCard(true)}
-                className="w-full p-2 mt-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 text-sm hover:border-blue-400 hover:text-blue-500 transition-colors flex items-center justify-center"
+          <Droppable droppableId={column.id} type="LEAD">
+            {(provided) => (
+              <div 
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className="p-2 flex-1 overflow-y-auto"
               >
-                <Plus className="h-4 w-4 mr-1" />
-                Adicionar Lead
-              </button>
-            )}
-          </div>
-
-          <Dialog open={isEditingColumn} onOpenChange={setIsEditingColumn}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Editar Coluna</DialogTitle>
-              </DialogHeader>
-              
-              <div className="space-y-4 mt-4">
-                <Input
-                  label="Nome da Coluna"
-                  value={columnName}
-                  onChange={(e) => setColumnName(e.target.value)}
-                />
-
-                <div className="flex justify-end space-x-2">
-                  <Button
-                    variant="ghost"
-                    onClick={() => setIsEditingColumn(false)}
+                {column.leads?.map((lead, index) => (
+                  <Draggable 
+                    key={lead.id} 
+                    draggableId={lead.id} 
+                    index={index}
+                    isDragDisabled={readOnly}
                   >
-                    Cancelar
-                  </Button>
-                  <Button
-                    variant="primary"
-                    onClick={handleUpdateColumn}
-                    disabled={!columnName.trim() || columnName === column.name}
+                    {(provided) => (
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        {...provided.dragHandleProps}
+                      >
+                        <KanbanCard 
+                          lead={lead}
+                          readOnly={readOnly}
+                        />
+                      </div>
+                    )}
+                  </Draggable>
+                ))}
+                {provided.placeholder}
+                
+                {!readOnly && isAddingCard ? (
+                  <div className="bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-2">
+                    <div className="space-y-2">
+                      <input
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        value={newLead.name}
+                        onChange={(e) => setNewLead({...newLead, name: e.target.value})}
+                        placeholder="Nome *"
+                      />
+                      <input
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        value={newLead.phone}
+                        onChange={(e) => setNewLead({...newLead, phone: e.target.value})}
+                        placeholder="Telefone *"
+                      />
+                      <input
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        value={newLead.interest}
+                        onChange={(e) => setNewLead({...newLead, interest: e.target.value})}
+                        placeholder="Interesse"
+                      />
+                      <textarea
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                        value={newLead.notes}
+                        onChange={(e) => setNewLead({...newLead, notes: e.target.value})}
+                        placeholder="Observações"
+                        rows={2}
+                      />
+                      <div className="flex justify-end space-x-2 pt-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => setIsAddingCard(false)}
+                        >
+                          Cancelar
+                        </Button>
+                        <Button 
+                          variant="primary" 
+                          size="sm" 
+                          onClick={handleAddLead}
+                          disabled={!newLead.name || !newLead.phone}
+                        >
+                          Salvar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : !readOnly && (
+                  <button
+                    onClick={() => setIsAddingCard(true)}
+                    className="w-full p-2 mt-2 border-2 border-dashed border-gray-300 rounded-md text-gray-500 text-sm hover:border-blue-400 hover:text-blue-500 transition-colors flex items-center justify-center"
                   >
-                    Salvar
-                  </Button>
-                </div>
+                    <Plus className="h-4 w-4 mr-1" />
+                    Adicionar Lead
+                  </button>
+                )}
               </div>
-            </DialogContent>
-          </Dialog>
+            )}
+          </Droppable>
         </div>
       )}
     </Draggable>
