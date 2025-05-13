@@ -16,8 +16,9 @@ interface EditClientModalProps {
     plan_expiry: string;
     status: string;
     whatsapp: string;
-    billing_day: number;
     billing_message: string;
+    initial_fee: number;
+    monthly_fee: number;
   } | null;
   onUpdate: () => void;
 }
@@ -35,8 +36,9 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
     plan_expiry: '',
     status: 'ativo',
     whatsapp: '',
-    billing_day: 1,
-    billing_message: ''
+    billing_message: '',
+    initial_fee: '0.00',
+    monthly_fee: '0.00'
   });
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
@@ -50,11 +52,18 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
         plan_expiry: client.plan_expiry,
         status: client.status,
         whatsapp: client.whatsapp || '',
-        billing_day: client.billing_day || 1,
-        billing_message: client.billing_message || ''
+        billing_message: client.billing_message || '',
+        initial_fee: client.initial_fee?.toFixed(2) || '0.00',
+        monthly_fee: client.monthly_fee?.toFixed(2) || '0.00'
       });
     }
   }, [client]);
+
+  const formatCurrency = (value: string) => {
+    const numericValue = value.replace(/[^0-9]/g, '');
+    const floatValue = parseFloat(numericValue) / 100;
+    return floatValue.toFixed(2);
+  };
 
   const handleSave = async () => {
     if (!client) return;
@@ -63,7 +72,17 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
     try {
       const { error } = await supabase
         .from('clients')
-        .update(formData)
+        .update({
+          name: formData.name,
+          email: formData.email,
+          plan_type: formData.plan_type,
+          plan_expiry: formData.plan_expiry,
+          status: formData.status,
+          whatsapp: formData.whatsapp,
+          billing_message: formData.billing_message,
+          initial_fee: parseFloat(formData.initial_fee),
+          monthly_fee: parseFloat(formData.monthly_fee)
+        })
         .eq('id', client.id);
 
       if (error) throw error;
@@ -94,18 +113,20 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
           <DialogTitle>Editar Cliente</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 mt-4">
-          <Input 
-            label="Nome"
-            value={formData.name}
-            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          />
-          
-          <Input 
-            label="Email"
-            type="email"
-            value={formData.email}
-            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input 
+              label="Nome"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+            />
+            
+            <Input 
+              label="Email"
+              type="email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+          </div>
 
           <Input 
             label="WhatsApp"
@@ -115,28 +136,60 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             placeholder="+5511999999999"
           />
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Tipo de Plano
-            </label>
-            <select
-              value={formData.plan_type}
-              onChange={(e) => setFormData({ ...formData, plan_type: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="mensal">Mensal</option>
-              <option value="trimestral">Trimestral</option>
-              <option value="anual">Anual</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Plano
+              </label>
+              <select
+                value={formData.plan_type}
+                onChange={(e) => setFormData({ ...formData, plan_type: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="mensal">Mensal</option>
+                <option value="trimestral">Trimestral</option>
+                <option value="anual">Anual</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              >
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+                <option value="pendente">Pendente</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Primeira Mensalidade (R$)"
+              type="text"
+              value={formData.initial_fee}
+              onChange={(e) => setFormData({ ...formData, initial_fee: formatCurrency(e.target.value) })}
+              placeholder="R$ 0,00"
+            />
+            <Input
+              label="Mensalidade Recorrente (R$)"
+              type="text"
+              value={formData.monthly_fee}
+              onChange={(e) => setFormData({ ...formData, monthly_fee: formatCurrency(e.target.value) })}
+              placeholder="R$ 0,00"
+            />
           </div>
 
           <Input
-            label="Dia do Vencimento"
-            type="number"
-            min="1"
-            max="31"
-            value={formData.billing_day}
-            onChange={(e) => setFormData({ ...formData, billing_day: parseInt(e.target.value) })}
+            label="Data de Vencimento"
+            type="date"
+            value={formData.plan_expiry.split('T')[0]}
+            onChange={(e) => setFormData({ ...formData, plan_expiry: e.target.value })}
           />
 
           <div>
@@ -150,28 +203,6 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               rows={3}
               placeholder="Mensagem que será enviada nos avisos de cobrança..."
             />
-          </div>
-
-          <Input
-            label="Data de Vencimento"
-            type="date"
-            value={formData.plan_expiry.split('T')[0]}
-            onChange={(e) => setFormData({ ...formData, plan_expiry: e.target.value })}
-          />
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Status
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md"
-            >
-              <option value="ativo">Ativo</option>
-              <option value="inativo">Inativo</option>
-              <option value="vencido">Vencido</option>
-            </select>
           </div>
         </div>
 
