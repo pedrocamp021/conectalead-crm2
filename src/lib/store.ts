@@ -2,6 +2,30 @@ import { create } from 'zustand';
 import { supabase } from './supabase';
 import type { AuthState, Client, Column, Lead } from './types';
 
+interface AppState extends AuthState {
+  columns: Column[];
+  leads: Lead[];
+  clients: Client[];
+  isLoadingData: boolean;
+  setUser: (user: AuthState['user']) => void;
+  setClient: (client: AuthState['client']) => void;
+  setIsAdmin: (isAdmin: boolean) => void;
+  setColumns: (columns: Column[]) => void;
+  setLeads: (leads: Lead[]) => void;
+  setClients: (clients: Client[]) => void;
+  setIsLoading: (isLoading: boolean) => void;
+  setIsLoadingData: (isLoadingData: boolean) => void;
+  logout: () => Promise<void>;
+  fetchUserData: () => Promise<void>;
+  fetchClients: () => Promise<void>;
+  fetchColumnsAndLeads: (clientId?: string) => Promise<void>;
+  moveLead: (leadId: string, newColumnId: string) => Promise<void>;
+  addLead: (lead: Omit<Lead, 'id' | 'created_at'>) => Promise<void>;
+  updateLead: (leadId: string, updates: Partial<Omit<Lead, 'id' | 'created_at'>>) => Promise<void>;
+  deleteLead: (leadId: string) => Promise<void>;
+  deleteFollowup: (followupId: string) => Promise<void>;
+}
+
 export const useAppStore = create<AppState>((set, get) => ({
   user: null,
   client: null,
@@ -59,13 +83,57 @@ export const useAppStore = create<AppState>((set, get) => ({
       .single();
 
     if (clientError || !clientData) {
-      console.warn('⚠️ Cliente não encontrado para o usuário:', user.email);
-      set({
-        user: { id: user.id, email: user.email!, role: 'client' },
-        client: null,
-        isLoading: false
-      });
-      return;
+      console.log('⚠️ Cliente não encontrado, criando novo...');
+      
+      try {
+        const { data: newClient, error: insertError } = await supabase
+          .from('clients')
+          .insert({
+            id: user.id,
+            name: user.user_metadata?.name || 'Novo Cliente',
+            email: user.email,
+            is_active: true,
+            is_admin: false,
+            plan_type: 'mensal',
+            plan_expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            status: 'ativo',
+            initial_fee: 0,
+            monthly_fee: 0
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+        if (!newClient) throw new Error('Nenhum dado retornado após inserção');
+
+        const defaultColumns = [
+          { name: 'Novos Leads', order: 1, color: 'blue', client_id: newClient.id },
+          { name: 'Em Contato', order: 2, color: 'yellow', client_id: newClient.id },
+          { name: 'Reunião Agendada', order: 3, color: 'purple', client_id: newClient.id },
+          { name: 'Fechado', order: 4, color: 'green', client_id: newClient.id }
+        ];
+
+        const { error: columnsError } = await supabase
+          .from('columns')
+          .insert(defaultColumns);
+
+        if (columnsError) throw columnsError;
+
+        set({
+          user: { id: user.id, email: user.email!, role: 'client' },
+          client: newClient,
+          isLoading: false
+        });
+        return;
+      } catch (error) {
+        console.error('❌ Erro ao criar cliente:', error);
+        set({
+          user: { id: user.id, email: user.email!, role: 'client' },
+          client: null,
+          isLoading: false
+        });
+        return;
+      }
     }
 
     set({
