@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useToast } from '../ui/use-toast';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Search, Filter, Calendar, DollarSign, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 
 interface Client {
@@ -10,6 +11,7 @@ interface Client {
   name: string;
   status: string;
   data_pagamento_atual: string | null;
+  data_pagamento_real: string | null;
   proxima_data_pagamento: string | null;
   pagamento_confirmado: boolean;
   monthly_fee: number;
@@ -23,6 +25,9 @@ export const AdminPagamentos: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [paymentDate, setPaymentDate] = useState('');
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   const fetchClients = async () => {
     try {
@@ -36,13 +41,15 @@ export const AdminPagamentos: React.FC = () => {
       // Update status based on payment date
       const updatedClients = (data || []).map(client => {
         const today = new Date();
-        const nextPayment = client.proxima_data_pagamento ? new Date(client.proxima_data_pagamento) : null;
+        const nextPayment = new Date(today.getFullYear(), today.getMonth(), 12);
         
-        if (nextPayment && !client.pagamento_confirmado) {
+        if (!client.pagamento_confirmado) {
           const diffDays = Math.floor((today.getTime() - nextPayment.getTime()) / (1000 * 60 * 60 * 24));
           
           if (diffDays > 4) {
             return { ...client, status: 'inativo' };
+          } else if (diffDays >= 0) {
+            return { ...client, status: 'pendente' };
           }
         }
         return client;
@@ -81,22 +88,63 @@ export const AdminPagamentos: React.FC = () => {
     fetchClients();
   }, []);
 
-  const handlePaymentToggle = async (client: Client) => {
+  const getNextPaymentDate = () => {
+    const today = new Date();
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 12);
+    return nextMonth.toISOString();
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!selectedClient || !paymentDate) return;
+
     try {
       const today = new Date();
-      const updates = client.pagamento_confirmado
-        ? {
-            data_pagamento_atual: null,
-            proxima_data_pagamento: null,
-            pagamento_confirmado: false,
-            status: 'inativo'
-          }
-        : {
-            data_pagamento_atual: today.toISOString(),
-            proxima_data_pagamento: new Date(today.setDate(today.getDate() + 30)).toISOString(),
-            pagamento_confirmado: true,
-            status: 'ativo'
-          };
+      const updates = {
+        data_pagamento_real: new Date(paymentDate).toISOString(),
+        data_pagamento_atual: today.toISOString(),
+        proxima_data_pagamento: getNextPaymentDate(),
+        pagamento_confirmado: true,
+        status: 'ativo'
+      };
+
+      const { error } = await supabase
+        .from('clients')
+        .update(updates)
+        .eq('id', selectedClient.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Pagamento confirmado",
+        description: "O pagamento foi registrado com sucesso.",
+      });
+
+      setIsPaymentModalOpen(false);
+      setSelectedClient(null);
+      setPaymentDate('');
+      fetchClients();
+    } catch (error) {
+      console.error('Erro ao confirmar pagamento:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível registrar o pagamento.",
+      });
+    }
+  };
+
+  const handleUnmarkPayment = async (client: Client) => {
+    try {
+      const today = new Date();
+      const lastDueDate = new Date(today.getFullYear(), today.getMonth(), 12);
+      const diffDays = Math.floor((today.getTime() - lastDueDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      const updates = {
+        data_pagamento_real: null,
+        data_pagamento_atual: null,
+        pagamento_confirmado: false,
+        status: diffDays > 4 ? 'inativo' : 'pendente'
+      };
 
       const { error } = await supabase
         .from('clients')
@@ -106,19 +154,17 @@ export const AdminPagamentos: React.FC = () => {
       if (error) throw error;
 
       toast({
-        title: client.pagamento_confirmado ? "Pagamento desmarcado" : "Pagamento confirmado",
-        description: client.pagamento_confirmado 
-          ? "O registro de pagamento foi removido."
-          : "O pagamento foi registrado com sucesso.",
+        title: "Pagamento desmarcado",
+        description: "O registro de pagamento foi removido.",
       });
 
       fetchClients();
     } catch (error) {
-      console.error('Erro ao atualizar pagamento:', error);
+      console.error('Erro ao desmarcar pagamento:', error);
       toast({
         variant: "destructive",
         title: "Erro",
-        description: "Não foi possível atualizar o status do pagamento.",
+        description: "Não foi possível desmarcar o pagamento.",
       });
     }
   };
@@ -228,7 +274,7 @@ export const AdminPagamentos: React.FC = () => {
                 Cliente
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Último Pagamento
+                Data Real do Pagamento
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Próximo Vencimento
@@ -252,8 +298,8 @@ export const AdminPagamentos: React.FC = () => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {client.data_pagamento_atual 
-                      ? new Date(client.data_pagamento_atual).toLocaleDateString()
+                    {client.data_pagamento_real 
+                      ? new Date(client.data_pagamento_real).toLocaleDateString()
                       : '-'
                     }
                   </div>
@@ -279,23 +325,75 @@ export const AdminPagamentos: React.FC = () => {
                   {getStatusBadge(client.status)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
-                  <Button
-                    variant={client.pagamento_confirmado ? "outline" : "primary"}
-                    size="sm"
-                    onClick={() => handlePaymentToggle(client)}
-                    icon={client.pagamento_confirmado 
-                      ? <XCircle className="h-4 w-4" />
-                      : <CheckCircle className="h-4 w-4" />
-                    }
-                  >
-                    {client.pagamento_confirmado ? 'Desmarcar pagamento' : 'Marcar como Pago'}
-                  </Button>
+                  {client.pagamento_confirmado ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleUnmarkPayment(client)}
+                      icon={<XCircle className="h-4 w-4" />}
+                    >
+                      Desmarcar pagamento
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedClient(client);
+                        setIsPaymentModalOpen(true);
+                      }}
+                      icon={<CheckCircle className="h-4 w-4" />}
+                    >
+                      Marcar como Pago
+                    </Button>
+                  )}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Pagamento</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Data Real do Pagamento
+              </label>
+              <Input
+                type="date"
+                value={paymentDate}
+                onChange={(e) => setPaymentDate(e.target.value)}
+              />
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setIsPaymentModalOpen(false);
+                  setSelectedClient(null);
+                  setPaymentDate('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleConfirmPayment}
+                disabled={!paymentDate}
+              >
+                Confirmar Pagamento
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
