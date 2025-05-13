@@ -3,8 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { supabase } from '../../lib/supabase';
-import { useToast } from '../ui/use-toast';
 import { useAppStore } from '../../lib/store';
+import { useToast } from '../ui/use-toast';
 
 interface EditClientModalProps {
   open: boolean;
@@ -189,7 +189,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
                 type="text"
                 value={formData.initial_fee}
                 onChange={(e) => setFormData({ ...formData, initial_fee: formatCurrency(e.target.value) })}
-                placeholder="Ex: R$ 100,00"
+                placeholder="Ex: R$ 297,00"
                 required
               />
               <Input
@@ -197,7 +197,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
                 type="text"
                 value={formData.monthly_fee}
                 onChange={(e) => setFormData({ ...formData, monthly_fee: formatCurrency(e.target.value) })}
-                placeholder="Ex: R$ 149,90"
+                placeholder="Ex: R$ 157,00"
                 required
               />
             </div>
