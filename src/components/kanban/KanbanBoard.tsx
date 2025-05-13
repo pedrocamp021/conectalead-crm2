@@ -17,7 +17,6 @@ interface KanbanBoardProps {
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({ readOnly = false, clientId }) => {
   const { columns, isLoadingData, fetchColumnsAndLeads, moveLead, client } = useAppStore();
-  const [draggedLeadId, setDraggedLeadId] = useState<string | null>(null);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumn, setNewColumn] = useState({ name: '', color: 'blue' });
   const { toast } = useToast();
@@ -32,57 +31,45 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ readOnly = false, clie
     }
   }, [clientId, client, fetchColumnsAndLeads]);
 
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, leadId: string) => {
-    if (readOnly) return;
-    setDraggedLeadId(leadId);
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (readOnly) return;
-    e.preventDefault();
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, columnId: string) => {
-    if (readOnly) return;
-    e.preventDefault();
-    
-    if (draggedLeadId) {
-      moveLead(draggedLeadId, columnId);
-      setDraggedLeadId(null);
-    }
-  };
-
   const handleDragEnd = async (result: DropResult) => {
     if (!result.destination || readOnly) return;
 
-    const newColumns = Array.from(columns);
-    const [removed] = newColumns.splice(result.source.index, 1);
-    newColumns.splice(result.destination.index, 0, removed);
+    if (result.type === 'column') {
+      const newColumns = Array.from(columns);
+      const [removed] = newColumns.splice(result.source.index, 1);
+      newColumns.splice(result.destination.index, 0, removed);
 
-    // Update order in database
-    try {
-      await Promise.all(
-        newColumns.map((column, index) =>
-          supabase
-            .from('columns')
-            .update({ order: index })
-            .eq('id', column.id)
-        )
-      );
+      try {
+        await Promise.all(
+          newColumns.map((column, index) =>
+            supabase
+              .from('columns')
+              .update({ order: index })
+              .eq('id', column.id)
+          )
+        );
 
-      await fetchColumnsAndLeads(client?.id);
+        await fetchColumnsAndLeads(client?.id);
 
-      toast({
-        title: "Colunas reordenadas",
-        description: "A ordem das colunas foi atualizada com sucesso.",
-      });
-    } catch (error) {
-      console.error('Erro ao reordenar colunas:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível reordenar as colunas.",
-      });
+        toast({
+          title: "Colunas reordenadas",
+          description: "A ordem das colunas foi atualizada com sucesso.",
+        });
+      } catch (error) {
+        console.error('Erro ao reordenar colunas:', error);
+        toast({
+          variant: "destructive",
+          title: "Erro",
+          description: "Não foi possível reordenar as colunas.",
+        });
+      }
+    } else if (result.type === 'LEAD') {
+      const sourceColumnId = result.source.droppableId;
+      const destinationColumnId = result.destination.droppableId;
+
+      if (sourceColumnId !== destinationColumnId) {
+        await moveLead(result.draggableId, destinationColumnId);
+      }
     }
   };
 
@@ -210,7 +197,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ readOnly = false, clie
     <>
       <div className="h-[calc(100vh-136px)] overflow-hidden">
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="columns" direction="horizontal">
+          <Droppable droppableId="columns" direction="horizontal" type="column">
             {(provided) => (
               <div
                 ref={provided.innerRef}
@@ -222,9 +209,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ readOnly = false, clie
                     key={column.id}
                     column={column}
                     index={index}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                    onDragStart={handleDragStart}
                     onDelete={handleDeleteColumn}
                     readOnly={readOnly}
                   />
