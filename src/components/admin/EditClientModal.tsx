@@ -4,6 +4,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../ui/use-toast';
+import { useAppStore } from '../../lib/store';
 
 interface EditClientModalProps {
   open: boolean;
@@ -29,6 +30,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
   client, 
   onUpdate 
 }) => {
+  const { isAdmin } = useAppStore();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -53,15 +55,23 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
         status: client.status,
         whatsapp: client.whatsapp || '',
         billing_message: client.billing_message || '',
-        initial_fee: client.initial_fee?.toFixed(2) || '0.00',
-        monthly_fee: client.monthly_fee?.toFixed(2) || '0.00'
+        initial_fee: (client.initial_fee || 0).toFixed(2),
+        monthly_fee: (client.monthly_fee || 0).toFixed(2)
       });
     }
   }, [client]);
 
   const formatCurrency = (value: string) => {
+    // Remove non-numeric characters and convert to number
     const numericValue = value.replace(/[^0-9]/g, '');
+    
+    // Handle empty or invalid input
+    if (!numericValue) return '0.00';
+    
+    // Convert to decimal (divide by 100 to handle cents)
     const floatValue = parseFloat(numericValue) / 100;
+    
+    // Format with 2 decimal places
     return floatValue.toFixed(2);
   };
 
@@ -70,19 +80,21 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
     setLoading(true);
 
     try {
+      const updates = {
+        name: formData.name,
+        email: formData.email,
+        plan_type: formData.plan_type,
+        plan_expiry: formData.plan_expiry,
+        status: formData.status,
+        whatsapp: formData.whatsapp,
+        billing_message: formData.billing_message,
+        initial_fee: parseFloat(formData.initial_fee),
+        monthly_fee: parseFloat(formData.monthly_fee)
+      };
+
       const { error } = await supabase
         .from('clients')
-        .update({
-          name: formData.name,
-          email: formData.email,
-          plan_type: formData.plan_type,
-          plan_expiry: formData.plan_expiry,
-          status: formData.status,
-          whatsapp: formData.whatsapp,
-          billing_message: formData.billing_message,
-          initial_fee: parseFloat(formData.initial_fee),
-          monthly_fee: parseFloat(formData.monthly_fee)
-        })
+        .update(updates)
         .eq('id', client.id);
 
       if (error) throw error;
@@ -118,6 +130,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               label="Nome"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              required
             />
             
             <Input 
@@ -125,6 +138,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              required
             />
           </div>
 
@@ -168,28 +182,33 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Input
-              label="Primeira Mensalidade (R$)"
-              type="text"
-              value={formData.initial_fee}
-              onChange={(e) => setFormData({ ...formData, initial_fee: formatCurrency(e.target.value) })}
-              placeholder="R$ 0,00"
-            />
-            <Input
-              label="Mensalidade Recorrente (R$)"
-              type="text"
-              value={formData.monthly_fee}
-              onChange={(e) => setFormData({ ...formData, monthly_fee: formatCurrency(e.target.value) })}
-              placeholder="R$ 0,00"
-            />
-          </div>
+          {isAdmin && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input
+                label="Primeira Mensalidade (R$)"
+                type="text"
+                value={formData.initial_fee}
+                onChange={(e) => setFormData({ ...formData, initial_fee: formatCurrency(e.target.value) })}
+                placeholder="Ex: R$ 100,00"
+                required
+              />
+              <Input
+                label="Mensalidade Recorrente (R$)"
+                type="text"
+                value={formData.monthly_fee}
+                onChange={(e) => setFormData({ ...formData, monthly_fee: formatCurrency(e.target.value) })}
+                placeholder="Ex: R$ 149,90"
+                required
+              />
+            </div>
+          )}
 
           <Input
             label="Data de Vencimento"
             type="date"
             value={formData.plan_expiry.split('T')[0]}
             onChange={(e) => setFormData({ ...formData, plan_expiry: e.target.value })}
+            required
           />
 
           <div>
