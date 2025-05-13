@@ -12,6 +12,44 @@ export const LoginForm: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const fetchUserData = useAppStore(state => state.fetchUserData);
 
+  const createInitialClient = async (user: any) => {
+    try {
+      // Check if client already exists
+      const { data: existingClient } = await supabase
+        .from('clients')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+
+      if (existingClient) {
+        console.log('Client already exists:', existingClient.id);
+        return;
+      }
+
+      // Create new client
+      const { error: insertError } = await supabase
+        .from('clients')
+        .insert({
+          id: user.id,
+          name: user.user_metadata?.name || 'Novo Cliente',
+          email: user.email,
+          is_active: true,
+          is_admin: false,
+          plan_type: 'mensal',
+          plan_expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          status: 'pendente',
+          initial_fee: 0,
+          monthly_fee: 0
+        });
+
+      if (insertError) throw insertError;
+      console.log('New client created for:', user.email);
+    } catch (error) {
+      console.error('Error creating client:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -23,18 +61,17 @@ export const LoginForm: React.FC = () => {
         password,
       });
 
-      console.log('🔐 Dados do login:', data);
-      console.log('Sessão ativa:', data.session);
-
       if (error) throw error;
+
+      // Create client if needed
+      if (data.user) {
+        await createInitialClient(data.user);
+      }
 
       await fetchUserData();
 
-      // ✅ Adicionado para exibir usuário no console
-      supabase.auth.getUser().then(({ data }) => {
-        console.log("🧠 Usuário logado:", data.user);
-      });
     } catch (error: any) {
+      console.error('Login error:', error);
       setError(error.message || 'Failed to login');
     } finally {
       setIsLoading(false);
