@@ -35,6 +35,20 @@ export const Reports: React.FC = () => {
     searchTerm: ''
   });
 
+  const statusColors = {
+    'Novo Lead (Conversa Iniciada)': '#3b82f6',
+    'Interesse Baixo (0 - 4)': '#ef4444',
+    'Interesse Médio (5 - 8)': '#f97316',
+    'Qualificado (9 - 10)': '#10b981',
+    'Fechando ou Fechado': '#8b5cf6'
+  };
+
+  const labelColors = {
+    'urgente': '#ef4444',
+    'vip': '#fbbf24',
+    'default': '#3b82f6'
+  };
+
   useEffect(() => {
     const fetchData = async () => {
       if (!client) return;
@@ -102,24 +116,27 @@ export const Reports: React.FC = () => {
     const stats = columns.map(column => ({
       name: column.name,
       value: filteredLeads.filter(lead => lead.column_id === column.id).length,
-      color: column.color
+      color: statusColors[column.name] || '#3b82f6'
     }));
 
     return stats;
   };
 
   const getLabelStats = () => {
-    const stats = labels.map(label => ({
-      name: label.name,
-      value: filteredLeads.filter(lead => 
-        lead.lead_label_assignments?.some(
-          (assignment: any) => assignment.lead_labels.id === label.id
-        )
-      ).length,
-      color: label.color
-    }));
+    const stats: Record<string, number> = {};
+    
+    filteredLeads.forEach(lead => {
+      lead.lead_label_assignments?.forEach((assignment: any) => {
+        const labelName = assignment.lead_labels.name.toLowerCase();
+        stats[labelName] = (stats[labelName] || 0) + 1;
+      });
+    });
 
-    return stats;
+    return Object.entries(stats).map(([name, value]) => ({
+      name,
+      value,
+      color: labelColors[name as keyof typeof labelColors] || labelColors.default
+    }));
   };
 
   const handleExportCSV = () => {
@@ -265,10 +282,7 @@ export const Reports: React.FC = () => {
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
                   {getColumnStats().map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={`var(--${entry.color}-500, #3b82f6)`}
-                    />
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -290,7 +304,11 @@ export const Reports: React.FC = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="value" name="Leads" fill="#3b82f6" />
+                <Bar dataKey="value" name="Leads">
+                  {getLabelStats().map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -340,7 +358,13 @@ export const Reports: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">
+                    <span
+                      className={`
+                        inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                        text-white
+                      `}
+                      style={{ backgroundColor: statusColors[lead.columns?.name] || '#3b82f6' }}
+                    >
                       {lead.columns?.name}
                     </span>
                   </td>
@@ -349,11 +373,10 @@ export const Reports: React.FC = () => {
                       {lead.lead_label_assignments?.map((assignment: any) => (
                         <span
                           key={assignment.lead_labels.id}
-                          className={`
-                            inline-flex items-center px-2 py-0.5 rounded-full 
-                            text-xs font-medium text-white
-                            bg-${assignment.lead_labels.color}-500
-                          `}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
+                          style={{
+                            backgroundColor: labelColors[assignment.lead_labels.name.toLowerCase() as keyof typeof labelColors] || labelColors.default
+                          }}
                         >
                           {assignment.lead_labels.name}
                         </span>
