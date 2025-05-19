@@ -17,13 +17,11 @@ interface Label {
 
 interface KanbanCardProps {
   lead: Lead & { labels?: Label[] };
-  onDragStart: (e: React.DragEvent<HTMLDivElement>, leadId: string) => void;
   readOnly?: boolean;
 }
 
 export const KanbanCard: React.FC<KanbanCardProps> = ({ 
   lead, 
-  onDragStart,
   readOnly = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
@@ -151,7 +149,6 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
     return (
       <div 
         className="bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-2"
-        draggable={false}
       >
         <div className="space-y-2">
           <Input
@@ -208,8 +205,6 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
           bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-2 
           ${!readOnly ? 'cursor-grab hover:shadow-md transition-shadow duration-200' : ''}
         `}
-        draggable={!readOnly}
-        onDragStart={(e) => onDragStart(e, lead.id)}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
