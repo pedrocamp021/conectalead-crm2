@@ -179,19 +179,14 @@ export const Reports: React.FC = () => {
   const customLegendRenderer = (props: any) => {
     const { payload } = props;
     return (
-      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 px-2 py-4 sm:px-4 sm:py-6 max-w-full">
+      <div className="flex flex-wrap gap-2 justify-center items-center mt-4 px-4 py-2">
         {payload.map((entry: any, index: number) => (
-          <div 
-            key={`legend-${index}`} 
-            className="flex items-center min-w-[100px] max-w-[150px] sm:max-w-[200px] px-2 text-center"
+          <div
+            key={`legend-${index}`}
+            className="px-3 py-1 rounded-full text-sm font-medium text-white transition-transform hover:scale-105"
+            style={{ backgroundColor: entry.color }}
           >
-            <div
-              className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-xs sm:text-sm text-gray-700 break-words">
-              {entry.value}
-            </span>
+            {entry.value} ({entry.payload.value})
           </div>
         ))}
       </div>
@@ -359,7 +354,7 @@ export const Reports: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm overflow-hidden">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+          <h3 className="text-lg font-semibold text-gray-800 mb-6 text-center">
             Distribuição por Coluna
           </h3>
           <div className="w-full max-w-full overflow-hidden">
@@ -395,12 +390,7 @@ export const Reports: React.FC = () => {
                       return null;
                     }}
                   />
-                  <Legend
-                    content={customLegendRenderer}
-                    layout="horizontal"
-                    verticalAlign="bottom"
-                    align="center"
-                  />
+                  <Legend content={customLegendRenderer} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
