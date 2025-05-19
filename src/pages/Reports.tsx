@@ -176,6 +176,28 @@ export const Reports: React.FC = () => {
     }));
   };
 
+  const customLegendRenderer = (props: any) => {
+    const { payload } = props;
+    return (
+      <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 px-2 py-4 sm:px-4 sm:py-6 max-w-full">
+        {payload.map((entry: any, index: number) => (
+          <div 
+            key={`legend-${index}`} 
+            className="flex items-center min-w-[100px] max-w-[150px] sm:max-w-[200px] px-2 text-center"
+          >
+            <div
+              className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-xs sm:text-sm text-gray-700 break-words">
+              {entry.value}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const StatCard: React.FC<{
     title: string;
     value: number;
@@ -195,23 +217,6 @@ export const Reports: React.FC = () => {
         </div>
         <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
         <p className="text-sm text-gray-600">{title}</p>
-      </div>
-    );
-  };
-
-  const customLegendRenderer = (props: any) => {
-    const { payload } = props;
-    return (
-      <div className="flex flex-wrap justify-center gap-4 px-4 py-6">
-        {payload.map((entry: any, index: number) => (
-          <div key={`legend-${index}`} className="flex items-center min-w-[120px] max-w-[200px] px-2">
-            <div
-              className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-sm text-gray-700 break-words">{entry.value}</span>
-          </div>
-        ))}
       </div>
     );
   };
@@ -357,8 +362,8 @@ export const Reports: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
             Distribuição por Coluna
           </h3>
-          <div className="min-w-[400px] max-w-full overflow-x-auto">
-            <div className="h-[400px]">
+          <div className="w-full max-w-full overflow-hidden">
+            <div className="h-[300px] sm:h-[400px] w-[90%] mx-auto">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -366,7 +371,7 @@ export const Reports: React.FC = () => {
                     cx="50%"
                     cy="45%"
                     innerRadius={60}
-                    outerRadius={100}
+                    outerRadius={80}
                     paddingAngle={5}
                     dataKey="value"
                   >
