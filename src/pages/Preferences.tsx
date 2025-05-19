@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Save, Loader2 } from 'lucide-react';
 import { useToast } from '../components/ui/use-toast';
-import { useNavigate } from 'react-router-dom';
 
 export const Preferences: React.FC = () => {
   const { client, fetchUserData } = useAppStore();
