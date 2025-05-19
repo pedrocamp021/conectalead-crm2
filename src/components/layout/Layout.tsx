@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, Navigate, useNavigate } from 'react-router-dom';
+import { Outlet, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../lib/store';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
@@ -10,17 +10,18 @@ export const Layout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, client, isAdmin, isLoading } = useAppStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
   };
 
   useEffect(() => {
-    // Redirect to default view after login
-    if (client?.default_view && !isAdmin && window.location.pathname === '/dashboard') {
+    // Only redirect to default view if at root path
+    if (client?.default_view && !isAdmin && location.pathname === '/') {
       navigate(`/${client.default_view}`);
     }
-  }, [client, isAdmin, navigate]);
+  }, [client, isAdmin, navigate, location.pathname]);
 
   if (isLoading) {
     return (
