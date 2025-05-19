@@ -28,6 +28,11 @@ interface LeadStats {
   converted: number;
 }
 
+const CHART_COLORS = [
+  '#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#8B5CF6',
+  '#EC4899', '#6366F1', '#0EA5E9', '#F97316', '#14B8A6'
+];
+
 export const Reports: React.FC = () => {
   const { client } = useAppStore();
   const [leads, setLeads] = useState<LeadWithColumn[]>([]);
@@ -148,13 +153,11 @@ export const Reports: React.FC = () => {
   });
 
   const getColumnStats = () => {
-    const stats = columns.map(column => ({
+    return columns.map((column, index) => ({
       name: column.name,
       value: filteredLeads.filter(lead => lead.column_id === column.id).length,
-      color: COLORS[column.name.toLowerCase().includes('fechado') ? 'converted' : 'default']
+      color: CHART_COLORS[index % CHART_COLORS.length]
     }));
-
-    return stats;
   };
 
   const getLabelStats = () => {
@@ -167,10 +170,10 @@ export const Reports: React.FC = () => {
       });
     });
 
-    return Object.entries(stats).map(([name, value]) => ({
+    return Object.entries(stats).map(([name, value], index) => ({
       name,
       value,
-      color: COLORS.default
+      color: CHART_COLORS[index % CHART_COLORS.length]
     }));
   };
 
@@ -413,7 +416,11 @@ export const Reports: React.FC = () => {
                       return null;
                     }}
                   />
-                  <Bar dataKey="value" fill={COLORS.default} />
+                  <Bar dataKey="value">
+                    {getLabelStats().map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -476,8 +483,7 @@ export const Reports: React.FC = () => {
                         text-white
                       `}
                       style={{ 
-                        backgroundColor: lead.columns?.name.toLowerCase().includes('fechado') ? 
-                          COLORS.converted : COLORS.default 
+                        backgroundColor: CHART_COLORS[columns.findIndex(col => col.id === lead.column_id) % CHART_COLORS.length]
                       }}
                     >
                       {lead.columns?.name}
@@ -485,11 +491,11 @@ export const Reports: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex flex-wrap gap-1">
-                      {lead.lead_label_assignments?.map((assignment: any) => (
+                      {lead.lead_label_assignments?.map((assignment: any, index) => (
                         <span
                           key={assignment.lead_labels.id}
                           className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
-                          style={{ backgroundColor: COLORS.default }}
+                          style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                         >
                           {assignment.lead_labels.name}
                         </span>
