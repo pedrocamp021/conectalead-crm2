@@ -32,21 +32,44 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ readOnly = false, clie
   }, [clientId, client, fetchColumnsAndLeads]);
 
   const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
+    const { destination, source, draggableId, type } = result;
 
     if (!destination || destination.droppableId === source.droppableId) return;
 
-    console.log("🔁 Movendo lead:", draggableId, "→", destination.droppableId);
+    if (type === 'column') {
+      const newColumns = Array.from(columns);
+      const [removed] = newColumns.splice(source.index, 1);
+      newColumns.splice(destination.index, 0, removed);
 
-    const { error } = await supabase
-      .from('leads')
-      .update({ column_id: destination.droppableId })
-      .eq('id', draggableId);
+      try {
+        await Promise.all(
+          newColumns.map((column, index) =>
+            supabase
+              .from('columns')
+              .update({ order: index })
+              .eq('id', column.id)
+          )
+        );
 
-    if (error) {
-      console.error("❌ Erro ao mover lead:", error.message);
+        await fetchColumnsAndLeads(client?.id);
+        console.log("✅ Columns reordered successfully");
+      } catch (error) {
+        console.error("❌ Error reordering columns:", error);
+      }
     } else {
-      console.log("✅ Lead movido com sucesso!");
+      console.log("🔁 Moving lead:", draggableId, "→", destination.droppableId);
+
+      const { error } = await supabase
+        .from('leads')
+        .update({ column_id: destination.droppableId })
+        .eq('id', draggableId);
+
+      if (error) {
+        console.error("❌ Error moving lead:", error.message);
+      } else {
+        console.log("✅ Lead moved successfully!");
+        await fetchColumnsAndLeads(client?.id);
+      }
     }
   };
 
