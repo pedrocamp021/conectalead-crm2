@@ -48,11 +48,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       icon: <Plug className="w-5 h-5" />,
     },
     {
-      name: 'Minha Visualização',
-      path: '/preferences',
-      icon: <Eye className="w-5 h-5" />,
-    },
-    {
       group: 'Configurações',
       items: [
         {
