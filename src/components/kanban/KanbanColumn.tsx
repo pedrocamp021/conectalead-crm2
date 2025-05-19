@@ -26,6 +26,7 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [columnName, setColumnName] = useState(column.name);
+  const [isDragOver, setIsDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { fetchColumnsAndLeads, addLead, client } = useAppStore();
   const { toast } = useToast();
@@ -105,16 +106,25 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    e.currentTarget.classList.add('bg-gray-50');
+    setIsDragOver(true);
   };
 
   const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
-    e.currentTarget.classList.remove('bg-gray-50');
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (
+      x < 0 || x >= rect.width ||
+      y < 0 || y >= rect.height
+    ) {
+      setIsDragOver(false);
+    }
   };
 
   const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    e.currentTarget.classList.remove('bg-gray-50');
+    setIsDragOver(false);
     
     const leadId = e.dataTransfer.getData('text/plain');
     if (!leadId) return;
@@ -128,7 +138,11 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       if (error) throw error;
       
       await fetchColumnsAndLeads(client?.id);
-      console.log("✅ Lead moved successfully!");
+      
+      toast({
+        title: "Lead movido",
+        description: "O lead foi movido com sucesso.",
+      });
     } catch (error) {
       console.error('Error moving lead:', error);
       toast({
@@ -157,7 +171,13 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
   };
 
   return (
-    <div className="min-w-[300px] w-[300px] bg-gray-100 rounded-md shadow flex flex-col max-h-full">
+    <div 
+      className={`
+        min-w-[300px] w-[300px] bg-gray-100 rounded-md shadow flex flex-col max-h-full
+        transition-all duration-200
+        ${isDragOver ? 'ring-2 ring-blue-400 ring-opacity-60 shadow-lg scale-[1.02]' : ''}
+      `}
+    >
       <div 
         className={`p-2 rounded-t-md ${getColumnHeaderColor()} text-white relative`}
       >
@@ -219,7 +239,10 @@ export const KanbanColumn: React.FC<KanbanColumnProps> = ({
       </div>
       
       <div 
-        className="p-2 flex-1 overflow-y-auto"
+        className={`
+          p-2 flex-1 overflow-y-auto transition-colors duration-200
+          ${isDragOver ? 'bg-blue-50' : ''}
+        `}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
