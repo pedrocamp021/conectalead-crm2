@@ -2,7 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../ui/use-toast';
 import { Button } from '../ui/Button';
-import { Search, Filter, Download, Loader2, AlertCircle, DollarSign } from 'lucide-react';
+import { Input } from '../ui/Input';
+import { Download, Filter, Search, Loader2, AlertCircle, DollarSign } from 'lucide-react';
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import type { Lead, Column } from '../../lib/types';
 
 interface Client {
   id: string;
@@ -60,31 +63,18 @@ export const AdminPrevisao: React.FC = () => {
 
   useEffect(() => {
     fetchClients();
-
-    // Subscribe to realtime changes
-    const subscription = supabase
-      .channel('clients_changes')
-      .on('postgres_changes', { 
-        event: '*', 
-        schema: 'public', 
-        table: 'clients' 
-      }, () => {
-        fetchClients();
-      })
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
   const getCurrentMonthStats = () => {
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
+    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
     const nextMonth = new Date(currentYear, currentMonth + 1, 1);
+    const lastDayOfNextMonth = new Date(currentYear, currentMonth + 2, 0);
 
-    // Received amount this month
+    // Received amount this month (already correct, keeping as is)
     const receivedAmount = clients
       .filter(client => {
         const paymentDate = client.data_pagamento_real || client.data_pagamento_atual;
@@ -96,25 +86,36 @@ export const AdminPrevisao: React.FC = () => {
         return sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee);
       }, 0);
 
-    // Amount to receive this month
+    // Amount to receive this month (pending payments)
     const pendingAmount = clients
       .filter(client => {
         if (!client.proxima_data_pagamento || client.pagamento_confirmado) return false;
         const dueDate = new Date(client.proxima_data_pagamento);
-        return dueDate.getMonth() === currentMonth && dueDate.getFullYear() === currentYear;
+        return dueDate >= firstDayOfMonth && dueDate <= lastDayOfMonth &&
+               (client.status === 'pendente' || client.status === 'inadimplente');
       })
       .reduce((sum, client) => {
         return sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee);
       }, 0);
 
-    // Next month forecast
+    // Next month forecast (including recurring payments)
     const nextMonthForecast = clients
       .filter(client => {
-        if (!client.proxima_data_pagamento || client.status !== 'ativo') return false;
+        if (client.status === 'cancelado') return false;
+        if (!client.proxima_data_pagamento) return false;
+        
         const dueDate = new Date(client.proxima_data_pagamento);
-        return dueDate < nextMonth;
+        const isNextMonth = dueDate >= nextMonth && dueDate <= lastDayOfNextMonth;
+        
+        // Include active clients with recurring payments
+        const isActiveRecurring = client.status === 'ativo' && client.data_pagamento_real;
+        
+        return isNextMonth || isActiveRecurring;
       })
-      .reduce((sum, client) => sum + client.monthly_fee, 0);
+      .reduce((sum, client) => {
+        // Use monthly_fee for recurring payments, initial_fee for new clients
+        return sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee);
+      }, 0);
 
     return {
       received: receivedAmount,
