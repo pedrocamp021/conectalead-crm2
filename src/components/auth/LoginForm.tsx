@@ -14,7 +14,6 @@ export const LoginForm: React.FC = () => {
 
   const createInitialClient = async (user: any) => {
     try {
-      // Check if client already exists
       const { data: existingClient } = await supabase
         .from('clients')
         .select('id')
@@ -22,11 +21,10 @@ export const LoginForm: React.FC = () => {
         .single();
 
       if (existingClient) {
-        console.log('Client already exists:', existingClient.id);
+        console.log('Cliente já existe:', existingClient.id);
         return;
       }
 
-      // Create new client
       const { error: insertError } = await supabase
         .from('clients')
         .insert({
@@ -43,9 +41,9 @@ export const LoginForm: React.FC = () => {
         });
 
       if (insertError) throw insertError;
-      console.log('New client created for:', user.email);
+      console.log('Novo cliente criado:', user.email);
     } catch (error) {
-      console.error('Error creating client:', error);
+      console.error('Erro ao criar cliente:', error);
       throw error;
     }
   };
@@ -63,7 +61,6 @@ export const LoginForm: React.FC = () => {
 
       if (error) throw error;
 
-      // Create client if needed
       if (data.user) {
         await createInitialClient(data.user);
       }
@@ -71,22 +68,24 @@ export const LoginForm: React.FC = () => {
       await fetchUserData();
 
     } catch (error: any) {
-      console.error('Login error:', error);
-      setError(error.message || 'Failed to login');
+      console.error('Erro ao fazer login:', error);
+      setError(error.message === 'Invalid login credentials'
+        ? 'E-mail ou senha incorretos'
+        : 'Ocorreu um erro ao fazer login. Tente novamente.');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-md px-8 py-10 bg-white rounded-lg shadow-lg">
-      <div className="mb-8 text-center">
-        <h2 className="text-3xl font-bold text-gray-800">ConectaLead</h2>
-        <p className="mt-2 text-gray-600">Sign in to access your account</p>
+    <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">ConectaLead</h1>
+        <p className="text-gray-600">Faça login para acessar sua conta</p>
       </div>
 
       {error && (
-        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
           {error}
         </div>
       )}
@@ -94,9 +93,9 @@ export const LoginForm: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           <Input
-            label="Email"
+            label="E-mail"
             type="email"
-            placeholder="you@example.com"
+            placeholder="seu@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -105,7 +104,7 @@ export const LoginForm: React.FC = () => {
           />
 
           <Input
-            label="Password"
+            label="Senha"
             type="password"
             placeholder="••••••••"
             value={password}
@@ -114,6 +113,20 @@ export const LoginForm: React.FC = () => {
             icon={<Lock className="w-5 h-5 text-gray-400" />}
             className="pl-10"
           />
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/reset-password`,
+                });
+              }}
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+            >
+              Esqueceu sua senha?
+            </button>
+          </div>
         </div>
 
         <Button 
@@ -121,14 +134,15 @@ export const LoginForm: React.FC = () => {
           variant="primary" 
           fullWidth 
           disabled={isLoading}
+          className="py-2.5"
         >
           {isLoading ? (
             <>
               <Loader2 className="w-5 h-5 mr-2 animate-spin" /> 
-              Signing in...
+              Entrando...
             </>
           ) : (
-            'Sign in'
+            'Entrar'
           )}
         </Button>
       </form>

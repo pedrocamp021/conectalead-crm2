@@ -10,21 +10,17 @@ export const Login: React.FC = () => {
     fetchUserData();
   }, [fetchUserData]);
 
-  // If loading, show nothing yet
   if (isLoading) {
     return null;
   }
 
-  // If user is already logged in, redirect to dashboard
   if (user) {
     return <Navigate to="/dashboard" replace />;
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <LoginForm />
-      </div>
+      <LoginForm />
     </div>
   );
 };
