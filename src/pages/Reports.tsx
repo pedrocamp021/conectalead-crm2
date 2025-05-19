@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
-import { Button } from '../ui/Button';
-import { Input } from '../ui/Input';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 import { Download, Filter, Search, Loader2, Users, UserCheck, TrendingUp, Target } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { Lead, Column } from '../lib/types';
