@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAppStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
-import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
+import { Button } from '../ui/Button';
+import { Input } from '../ui/Input';
 import { Download, Filter, Search, Loader2, Users, UserCheck, TrendingUp, Target } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { Lead, Column } from '../lib/types';
@@ -349,7 +349,7 @@ export const Reports: React.FC = () => {
             Distribuição por Coluna
           </h3>
           <div className="w-full max-w-[90%] mx-auto overflow-hidden">
-            <div className="h-[240px] sm:h-[300px] py-6">
+            <div className="h-[280px] py-6">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
