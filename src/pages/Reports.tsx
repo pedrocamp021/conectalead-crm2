@@ -166,24 +166,6 @@ export const Reports: React.FC = () => {
     });
   };
 
-  const customLegendRenderer = (props: any) => {
-    const { payload } = props;
-    return (
-      <div className="flex flex-wrap justify-center gap-2 mt-6 px-4 max-w-[90%] mx-auto">
-        {payload.map((entry: any, index: number) => (
-          <div
-            key={`legend-${index}`}
-            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-white break-words"
-            style={{ backgroundColor: entry.color }}
-          >
-            <span className="truncate">{entry.value}</span>
-            <span className="ml-1 opacity-75">({entry.payload.value})</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   const StatCard: React.FC<{
     title: string;
     value: number;
@@ -344,46 +326,45 @@ export const Reports: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-6 text-center">
             Distribuição por Coluna
           </h3>
-          <div className="w-full max-w-[90%] mx-auto overflow-hidden">
-            <div className="h-[280px] py-6">
-              <ResponsiveContainer width="100%" height="100%">
+          
+          <div className="flex flex-col md:flex-row gap-8 w-full items-center justify-center">
+            {/* Gráfico Responsivo */}
+            <div className="flex justify-center md:w-1/2">
+              <ResponsiveContainer width={250} height={250}>
                 <PieChart>
                   <Pie
                     data={getColumnStats()}
+                    dataKey="value"
+                    nameKey="name"
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
                     outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
+                    innerRadius={50}
+                    label={false}
                   >
                     {getColumnStats().map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-white p-3 shadow-lg rounded-lg border">
-                            <p className="font-medium">{data.name}</p>
-                            <p className="text-sm text-gray-600">
-                              {data.value} leads ({data.percentage}%)
-                            </p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Legend content={customLegendRenderer} />
                 </PieChart>
               </ResponsiveContainer>
+            </div>
+
+            {/* Chips de Legenda */}
+            <div className="flex flex-wrap justify-center items-center gap-3 md:justify-start md:items-start md:w-1/2">
+              {getColumnStats().map((entry, index) => (
+                <span
+                  key={entry.name}
+                  className="px-4 py-1 text-white text-sm font-medium rounded-full"
+                  style={{ backgroundColor: entry.color }}
+                >
+                  {entry.name} ({entry.value})
+                </span>
+              ))}
             </div>
           </div>
         </div>
