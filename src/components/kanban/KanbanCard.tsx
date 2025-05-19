@@ -33,6 +33,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   const [isAddingLabel, setIsAddingLabel] = useState(false);
   const [labels, setLabels] = useState<Label[]>(lead.labels || []);
   const [newLabel, setNewLabel] = useState({ name: '', color: 'blue' });
+  const [isDragging, setIsDragging] = useState(false);
   
   const { updateLead, deleteLead, client } = useAppStore();
   const navigate = useNavigate();
@@ -142,6 +143,24 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData('text/plain', lead.id);
     e.dataTransfer.effectAllowed = 'move';
+    setIsDragging(true);
+
+    // Create a semi-transparent drag image
+    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
+    dragImage.style.opacity = '0.6';
+    dragImage.style.position = 'absolute';
+    dragImage.style.top = '-1000px';
+    document.body.appendChild(dragImage);
+    e.dataTransfer.setDragImage(dragImage, 20, 20);
+
+    // Remove the drag image after it's no longer needed
+    requestAnimationFrame(() => {
+      document.body.removeChild(dragImage);
+    });
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
   };
 
   const formattedDate = new Date(lead.created_at).toLocaleDateString('pt-BR', {
@@ -207,11 +226,13 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
     <>
       <div 
         className={`
-          bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-2 
-          ${!readOnly ? 'cursor-grab hover:shadow-md transition-shadow duration-200' : ''}
+          bg-white p-3 rounded-md shadow-sm border mb-2 transition-all duration-200
+          ${!readOnly ? 'cursor-grab active:cursor-grabbing hover:shadow-md' : ''}
+          ${isDragging ? 'border-blue-400 shadow-lg rotate-2 scale-105' : 'border-gray-200'}
         `}
         draggable={!readOnly}
         onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
