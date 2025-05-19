@@ -15,7 +15,6 @@ import { AdminConfiguracao } from './components/admin/AdminConfiguracao';
 import { AdminRecorrencia } from './components/admin/AdminRecorrencia';
 import { KanbanBoard } from './components/kanban/KanbanBoard';
 import { Reports } from './pages/Reports';
-import { Preferences } from './pages/Preferences';
 import { Profile } from './pages/Profile';
 import { Support } from './pages/Support';
 import { WhatsappConnect } from './pages/WhatsappConnect';
@@ -58,7 +57,6 @@ function App() {
           <Route path="/kanban" element={<KanbanBoard />} />
           <Route path="/followups" element={<Followups />} />
           <Route path="/reports" element={<Reports />} />
-          <Route path="/preferences" element={<Preferences />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/support" element={<Support />} />
           <Route path="/expired" element={<Expired />} />
