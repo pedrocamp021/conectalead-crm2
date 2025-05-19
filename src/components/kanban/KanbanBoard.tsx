@@ -32,43 +32,21 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ readOnly = false, clie
   }, [clientId, client, fetchColumnsAndLeads]);
 
   const handleDragEnd = async (result: DropResult) => {
-    if (!result.destination || readOnly) return;
+    const { destination, source, draggableId } = result;
 
-    const { source, destination, draggableId, type } = result;
+    if (!destination || destination.droppableId === source.droppableId) return;
 
-    if (type === 'column') {
-      const newColumns = Array.from(columns);
-      const [removed] = newColumns.splice(source.index, 1);
-      newColumns.splice(destination.index, 0, removed);
+    console.log("🔁 Movendo lead:", draggableId, "→", destination.droppableId);
 
-      try {
-        await Promise.all(
-          newColumns.map((column, index) =>
-            supabase
-              .from('columns')
-              .update({ order: index })
-              .eq('id', column.id)
-          )
-        );
+    const { error } = await supabase
+      .from('leads')
+      .update({ column_id: destination.droppableId })
+      .eq('id', draggableId);
 
-        await fetchColumnsAndLeads(client?.id);
-
-        toast({
-          title: "Colunas reordenadas",
-          description: "A ordem das colunas foi atualizada com sucesso.",
-        });
-      } catch (error) {
-        console.error('Erro ao reordenar colunas:', error);
-        toast({
-          variant: "destructive",
-          title: "Erro",
-          description: "Não foi possível reordenar as colunas.",
-        });
-      }
-    } else if (type === 'LEAD') {
-      if (source.droppableId !== destination.droppableId) {
-        await moveLead(draggableId, destination.droppableId);
-      }
+    if (error) {
+      console.error("❌ Erro ao mover lead:", error.message);
+    } else {
+      console.log("✅ Lead movido com sucesso!");
     }
   };
 
