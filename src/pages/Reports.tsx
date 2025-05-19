@@ -169,11 +169,11 @@ export const Reports: React.FC = () => {
   const customLegendRenderer = (props: any) => {
     const { payload } = props;
     return (
-      <div className="flex flex-wrap justify-center gap-2 mt-4 px-2 py-2 max-w-[90%] mx-auto">
+      <div className="flex flex-wrap justify-center gap-2 mt-6 px-4 max-w-[90%] mx-auto">
         {payload.map((entry: any, index: number) => (
           <div
             key={`legend-${index}`}
-            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white break-words"
+            className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium text-white break-words"
             style={{ backgroundColor: entry.color }}
           >
             <span className="truncate">{entry.value}</span>
@@ -348,14 +348,14 @@ export const Reports: React.FC = () => {
           <h3 className="text-lg font-semibold text-gray-800 mb-6 text-center">
             Distribuição por Coluna
           </h3>
-          <div className="w-full max-w-full overflow-hidden">
-            <div className="h-[300px] sm:h-[400px] w-[90%] mx-auto">
+          <div className="w-full max-w-[90%] mx-auto overflow-hidden">
+            <div className="h-[240px] sm:h-[300px] py-6">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={getColumnStats()}
                     cx="50%"
-                    cy="45%"
+                    cy="50%"
                     innerRadius={60}
                     outerRadius={80}
                     paddingAngle={5}
