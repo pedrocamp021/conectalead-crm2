@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../ui/use-toast';
-import { DragDropContext, Droppable, DropResult } from 'react-beautiful-dnd';
 import type { Column } from '../../lib/types';
 
 interface KanbanBoardProps {
@@ -30,48 +29,6 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ readOnly = false, clie
       console.warn("⚠️ No client detected in KanbanBoard.");
     }
   }, [clientId, client, fetchColumnsAndLeads]);
-
-  const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId, type } = result;
-
-    if (!destination || destination.droppableId === source.droppableId) return;
-
-    if (type === 'column') {
-      const newColumns = Array.from(columns);
-      const [removed] = newColumns.splice(source.index, 1);
-      newColumns.splice(destination.index, 0, removed);
-
-      try {
-        await Promise.all(
-          newColumns.map((column, index) =>
-            supabase
-              .from('columns')
-              .update({ order: index })
-              .eq('id', column.id)
-          )
-        );
-
-        await fetchColumnsAndLeads(client?.id);
-        console.log("✅ Columns reordered successfully");
-      } catch (error) {
-        console.error("❌ Error reordering columns:", error);
-      }
-    } else {
-      console.log("🔁 Moving lead:", draggableId, "→", destination.droppableId);
-
-      const { error } = await supabase
-        .from('leads')
-        .update({ column_id: destination.droppableId })
-        .eq('id', draggableId);
-
-      if (error) {
-        console.error("❌ Error moving lead:", error.message);
-      } else {
-        console.log("✅ Lead moved successfully!");
-        await fetchColumnsAndLeads(client?.id);
-      }
-    }
-  };
 
   const handleAddColumn = async () => {
     if (!client || !newColumn.name) return;
@@ -196,40 +153,29 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ readOnly = false, clie
   return (
     <>
       <div className="h-[calc(100vh-136px)] overflow-hidden">
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Droppable droppableId="columns" direction="horizontal" type="column">
-            {(provided) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className="flex h-full space-x-4 overflow-x-auto pb-4 pr-4"
-              >
-                {columns.map((column, index) => (
-                  <KanbanColumn
-                    key={column.id}
-                    column={column}
-                    index={index}
-                    onDelete={handleDeleteColumn}
-                    readOnly={readOnly}
-                  />
-                ))}
-                {provided.placeholder}
+        <div className="flex h-full space-x-4 overflow-x-auto pb-4 pr-4">
+          {columns.map((column, index) => (
+            <KanbanColumn
+              key={column.id}
+              column={column}
+              index={index}
+              onDelete={handleDeleteColumn}
+              readOnly={readOnly}
+            />
+          ))}
 
-                {!readOnly && (
-                  <div className="flex-shrink-0 w-80 flex items-start pt-12">
-                    <button
-                      onClick={() => setIsAddingColumn(true)}
-                      className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors flex items-center justify-center"
-                    >
-                      <Plus className="h-5 w-5 mr-2" />
-                      Nova Coluna
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-          </Droppable>
-        </DragDropContext>
+          {!readOnly && (
+            <div className="flex-shrink-0 w-80 flex items-start pt-12">
+              <button
+                onClick={() => setIsAddingColumn(true)}
+                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-500 transition-colors flex items-center justify-center"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Nova Coluna
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <Dialog open={isAddingColumn} onOpenChange={setIsAddingColumn}>

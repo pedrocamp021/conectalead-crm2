@@ -139,6 +139,11 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
     }
   };
 
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    e.dataTransfer.setData('text/plain', lead.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
   const formattedDate = new Date(lead.created_at).toLocaleDateString('pt-BR', {
     day: '2-digit',
     month: '2-digit',
@@ -205,6 +210,8 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
           bg-white p-3 rounded-md shadow-sm border border-gray-200 mb-2 
           ${!readOnly ? 'cursor-grab hover:shadow-md transition-shadow duration-200' : ''}
         `}
+        draggable={!readOnly}
+        onDragStart={handleDragStart}
         onMouseEnter={() => setIsHovering(true)}
         onMouseLeave={() => setIsHovering(false)}
       >
