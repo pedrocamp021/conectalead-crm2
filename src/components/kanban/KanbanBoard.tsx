@@ -34,10 +34,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ readOnly = false, clie
   const handleDragEnd = async (result: DropResult) => {
     if (!result.destination || readOnly) return;
 
-    if (result.type === 'column') {
+    const { source, destination, draggableId, type } = result;
+
+    if (type === 'column') {
       const newColumns = Array.from(columns);
-      const [removed] = newColumns.splice(result.source.index, 1);
-      newColumns.splice(result.destination.index, 0, removed);
+      const [removed] = newColumns.splice(source.index, 1);
+      newColumns.splice(destination.index, 0, removed);
 
       try {
         await Promise.all(
@@ -63,12 +65,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({ readOnly = false, clie
           description: "Não foi possível reordenar as colunas.",
         });
       }
-    } else if (result.type === 'LEAD') {
-      const sourceColumnId = result.source.droppableId;
-      const destinationColumnId = result.destination.droppableId;
-
-      if (sourceColumnId !== destinationColumnId) {
-        await moveLead(result.draggableId, destinationColumnId);
+    } else if (type === 'LEAD') {
+      if (source.droppableId !== destination.droppableId) {
+        await moveLead(draggableId, destination.droppableId);
       }
     }
   };
