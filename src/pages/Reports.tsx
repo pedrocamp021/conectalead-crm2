@@ -28,10 +28,13 @@ interface LeadStats {
   converted: number;
 }
 
-const CHART_COLORS = [
-  '#3B82F6', '#EF4444', '#F59E0B', '#10B981', '#8B5CF6',
-  '#EC4899', '#6366F1', '#0EA5E9', '#F97316', '#14B8A6'
-];
+const CHART_COLORS = {
+  newLead: '#3B82F6',    // blue-500
+  lowInterest: '#EF4444', // red-500
+  mediumInterest: '#F59E0B', // yellow-500
+  qualified: '#10B981',   // green-500
+  closing: '#8B5CF6'     // purple-500
+};
 
 export const Reports: React.FC = () => {
   const { client } = useAppStore();
@@ -54,14 +57,6 @@ export const Reports: React.FC = () => {
     labelId: '',
     searchTerm: ''
   });
-
-  const COLORS = {
-    qualified: '#10b981',
-    medium: '#f59e0b',
-    low: '#ef4444',
-    converted: '#6366f1',
-    default: '#3b82f6'
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -152,41 +147,37 @@ export const Reports: React.FC = () => {
   });
 
   const getColumnStats = () => {
-    return columns.map((column, index) => ({
-      name: column.name,
-      value: filteredLeads.filter(lead => lead.column_id === column.id).length,
-      color: CHART_COLORS[index % CHART_COLORS.length]
-    }));
-  };
+    return columns.map(column => {
+      const count = filteredLeads.filter(lead => lead.column_id === column.id).length;
+      const percentage = stats.total > 0 ? Math.round((count / stats.total) * 100) : 0;
+      
+      let color = CHART_COLORS.newLead;
+      if (column.name.toLowerCase().includes('baixo')) color = CHART_COLORS.lowInterest;
+      else if (column.name.toLowerCase().includes('médio')) color = CHART_COLORS.mediumInterest;
+      else if (column.name.toLowerCase().includes('qualificado')) color = CHART_COLORS.qualified;
+      else if (column.name.toLowerCase().includes('fechando') || column.name.toLowerCase().includes('fechado')) color = CHART_COLORS.closing;
 
-  const getLabelStats = () => {
-    const stats: Record<string, number> = {};
-    
-    filteredLeads.forEach(lead => {
-      lead.lead_label_assignments?.forEach((assignment: any) => {
-        const labelName = assignment.lead_labels.name;
-        stats[labelName] = (stats[labelName] || 0) + 1;
-      });
+      return {
+        name: column.name,
+        value: count,
+        percentage,
+        color
+      };
     });
-
-    return Object.entries(stats).map(([name, value], index) => ({
-      name,
-      value,
-      color: CHART_COLORS[index % CHART_COLORS.length]
-    }));
   };
 
   const customLegendRenderer = (props: any) => {
     const { payload } = props;
     return (
-      <div className="flex flex-wrap gap-2 justify-center items-center mt-4 px-4 py-2">
+      <div className="flex flex-wrap justify-center gap-2 mt-4 px-2 py-2 max-w-[90%] mx-auto">
         {payload.map((entry: any, index: number) => (
           <div
             key={`legend-${index}`}
-            className="px-3 py-1 rounded-full text-sm font-medium text-white transition-transform hover:scale-105"
+            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white break-words"
             style={{ backgroundColor: entry.color }}
           >
-            {entry.value} ({entry.payload.value})
+            <span className="truncate">{entry.value}</span>
+            <span className="ml-1 opacity-75">({entry.payload.value})</span>
           </div>
         ))}
       </div>
@@ -269,28 +260,28 @@ export const Reports: React.FC = () => {
           value={stats.total}
           total={stats.total}
           icon={<Users className="h-6 w-6" />}
-          color={COLORS.default}
+          color={CHART_COLORS.newLead}
         />
         <StatCard
           title="Leads Qualificados"
           value={stats.qualified}
           total={stats.total}
           icon={<UserCheck className="h-6 w-6" />}
-          color={COLORS.qualified}
+          color={CHART_COLORS.qualified}
         />
         <StatCard
           title="Interesse Médio"
           value={stats.mediumInterest}
           total={stats.total}
           icon={<Target className="h-6 w-6" />}
-          color={COLORS.medium}
+          color={CHART_COLORS.mediumInterest}
         />
         <StatCard
           title="Taxa de Conversão"
           value={stats.converted}
           total={stats.total}
           icon={<TrendingUp className="h-6 w-6" />}
-          color={COLORS.converted}
+          color={CHART_COLORS.closing}
         />
       </div>
 
@@ -382,7 +373,7 @@ export const Reports: React.FC = () => {
                           <div className="bg-white p-3 shadow-lg rounded-lg border">
                             <p className="font-medium">{data.name}</p>
                             <p className="text-sm text-gray-600">
-                              {data.value} leads ({((data.value / stats.total) * 100).toFixed(1)}%)
+                              {data.value} leads ({data.percentage}%)
                             </p>
                           </div>
                         );
@@ -402,9 +393,9 @@ export const Reports: React.FC = () => {
             Leads por Etiqueta
           </h3>
           <div className="h-[300px]">
-            {getLabelStats().length > 0 ? (
+            {labels.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={getLabelStats()} layout="vertical">
+                <BarChart data={labels} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis type="number" />
                   <YAxis dataKey="name" type="category" width={150} />
@@ -425,8 +416,8 @@ export const Reports: React.FC = () => {
                     }}
                   />
                   <Bar dataKey="value">
-                    {getLabelStats().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {labels.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={CHART_COLORS.newLead} />
                     ))}
                   </Bar>
                 </BarChart>
@@ -485,13 +476,8 @@ export const Reports: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`
-                        inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                        text-white
-                      `}
-                      style={{ 
-                        backgroundColor: CHART_COLORS[columns.findIndex(col => col.id === lead.column_id) % CHART_COLORS.length]
-                      }}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
+                      style={{ backgroundColor: CHART_COLORS.newLead }}
                     >
                       {lead.columns?.name}
                     </span>
@@ -502,7 +488,7 @@ export const Reports: React.FC = () => {
                         <span
                           key={assignment.lead_labels.id}
                           className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
-                          style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                          style={{ backgroundColor: CHART_COLORS.newLead }}
                         >
                           {assignment.lead_labels.name}
                         </span>
