@@ -3,7 +3,7 @@ import { useAppStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Download, Filter, Search, Loader2 } from 'lucide-react';
+import { Download, Filter, Search, Loader2, Users, UserCheck, TrendingUp, Target } from 'lucide-react';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { Lead, Column } from '../lib/types';
 
@@ -20,12 +20,27 @@ interface FilterState {
   searchTerm: string;
 }
 
+interface LeadStats {
+  total: number;
+  qualified: number;
+  mediumInterest: number;
+  lowInterest: number;
+  converted: number;
+}
+
 export const Reports: React.FC = () => {
   const { client } = useAppStore();
   const [leads, setLeads] = useState<LeadWithColumn[]>([]);
   const [columns, setColumns] = useState<Column[]>([]);
   const [labels, setLabels] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<LeadStats>({
+    total: 0,
+    qualified: 0,
+    mediumInterest: 0,
+    lowInterest: 0,
+    converted: 0
+  });
   const [filters, setFilters] = useState<FilterState>({
     startDate: '',
     endDate: '',
@@ -35,18 +50,12 @@ export const Reports: React.FC = () => {
     searchTerm: ''
   });
 
-  const statusColors = {
-    'Novo Lead (Conversa Iniciada)': '#3b82f6',
-    'Interesse Baixo (0 - 4)': '#ef4444',
-    'Interesse Médio (5 - 8)': '#f97316',
-    'Qualificado (9 - 10)': '#10b981',
-    'Fechando ou Fechado': '#8b5cf6'
-  };
-
-  const labelColors = {
-    'urgente': '#ef4444',
-    'vip': '#fbbf24',
-    'default': '#3b82f6'
+  const COLORS = {
+    qualified: '#10b981',
+    medium: '#f59e0b',
+    low: '#ef4444',
+    converted: '#6366f1',
+    default: '#3b82f6'
   };
 
   useEffect(() => {
@@ -54,7 +63,6 @@ export const Reports: React.FC = () => {
       if (!client) return;
 
       try {
-        // Fetch leads with columns
         const { data: leadsData, error: leadsError } = await supabase
           .from('leads')
           .select(`
@@ -69,26 +77,53 @@ export const Reports: React.FC = () => {
 
         if (leadsError) throw leadsError;
 
-        // Fetch columns
-        const { data: columnsData, error: columnsError } = await supabase
+        const { data: columnsData } = await supabase
           .from('columns')
           .select('*')
           .eq('client_id', client.id)
           .order('order');
 
-        if (columnsError) throw columnsError;
-
-        // Fetch labels
-        const { data: labelsData, error: labelsError } = await supabase
+        const { data: labelsData } = await supabase
           .from('lead_labels')
           .select('*')
           .eq('client_id', client.id);
 
-        if (labelsError) throw labelsError;
+        if (leadsData) {
+          setLeads(leadsData);
+          
+          // Calculate stats
+          const total = leadsData.length;
+          const qualified = leadsData.filter(lead => {
+            const interest = parseInt(lead.interest || '0');
+            return interest >= 9;
+          }).length;
+          
+          const mediumInterest = leadsData.filter(lead => {
+            const interest = parseInt(lead.interest || '0');
+            return interest >= 5 && interest <= 8;
+          }).length;
+          
+          const lowInterest = leadsData.filter(lead => {
+            const interest = parseInt(lead.interest || '0');
+            return interest < 5;
+          }).length;
+          
+          const converted = leadsData.filter(lead => 
+            lead.columns?.name.toLowerCase().includes('fechado') || 
+            lead.columns?.name.toLowerCase().includes('fechando')
+          ).length;
 
-        setLeads(leadsData || []);
-        setColumns(columnsData || []);
-        setLabels(labelsData || []);
+          setStats({
+            total,
+            qualified,
+            mediumInterest,
+            lowInterest,
+            converted
+          });
+        }
+
+        if (columnsData) setColumns(columnsData);
+        if (labelsData) setLabels(labelsData);
       } catch (error) {
         console.error('Erro ao carregar dados:', error);
       } finally {
@@ -116,7 +151,7 @@ export const Reports: React.FC = () => {
     const stats = columns.map(column => ({
       name: column.name,
       value: filteredLeads.filter(lead => lead.column_id === column.id).length,
-      color: statusColors[column.name] || '#3b82f6'
+      color: COLORS[column.name.toLowerCase().includes('fechado') ? 'converted' : 'default']
     }));
 
     return stats;
@@ -127,7 +162,7 @@ export const Reports: React.FC = () => {
     
     filteredLeads.forEach(lead => {
       lead.lead_label_assignments?.forEach((assignment: any) => {
-        const labelName = assignment.lead_labels.name.toLowerCase();
+        const labelName = assignment.lead_labels.name;
         stats[labelName] = (stats[labelName] || 0) + 1;
       });
     });
@@ -135,45 +170,31 @@ export const Reports: React.FC = () => {
     return Object.entries(stats).map(([name, value]) => ({
       name,
       value,
-      color: labelColors[name as keyof typeof labelColors] || labelColors.default
+      color: COLORS.default
     }));
   };
 
-  const handleExportCSV = () => {
-    const headers = [
-      'Nome',
-      'Telefone',
-      'Coluna',
-      'Etiquetas',
-      'Data de Criação',
-      'Interesse',
-      'Observações'
-    ];
-
-    const rows = filteredLeads.map(lead => [
-      lead.name,
-      lead.phone,
-      lead.columns?.name || '',
-      lead.lead_label_assignments?.map((a: any) => a.lead_labels.name).join(', ') || '',
-      new Date(lead.created_at).toLocaleDateString(),
-      lead.interest || '',
-      lead.notes || ''
-    ]);
-
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `relatorio-leads-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const StatCard: React.FC<{
+    title: string;
+    value: number;
+    total: number;
+    icon: React.ReactNode;
+    color: string;
+  }> = ({ title, value, total, icon, color }) => {
+    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+    
+    return (
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className={`p-3 rounded-lg bg-opacity-10`} style={{ backgroundColor: `${color}20` }}>
+            <div style={{ color }}>{icon}</div>
+          </div>
+          <span className="text-sm font-medium text-gray-500">{percentage}%</span>
+        </div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-1">{value}</h3>
+        <p className="text-sm text-gray-600">{title}</p>
+      </div>
+    );
   };
 
   if (isLoading) {
@@ -185,7 +206,7 @@ export const Reports: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">Relatórios e Análise de Leads</h1>
@@ -196,18 +217,70 @@ export const Reports: React.FC = () => {
 
         <Button
           variant="primary"
-          onClick={handleExportCSV}
+          onClick={() => {
+            const headers = ['Nome', 'Telefone', 'Coluna', 'Etiquetas', 'Data', 'Interesse'];
+            const rows = filteredLeads.map(lead => [
+              lead.name,
+              lead.phone,
+              lead.columns?.name || '',
+              lead.lead_label_assignments?.map((a: any) => a.lead_labels.name).join(', ') || '',
+              new Date(lead.created_at).toLocaleDateString(),
+              lead.interest || ''
+            ]);
+
+            const csvContent = [headers.join(','), ...rows.map(row => row.join(','))].join('\n');
+            const blob = new Blob([csvContent], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'leads.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }}
           icon={<Download className="h-4 w-4" />}
         >
           Exportar CSV
         </Button>
       </div>
 
-      {/* Filtros */}
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="Total de Leads"
+          value={stats.total}
+          total={stats.total}
+          icon={<Users className="h-6 w-6" />}
+          color={COLORS.default}
+        />
+        <StatCard
+          title="Leads Qualificados"
+          value={stats.qualified}
+          total={stats.total}
+          icon={<UserCheck className="h-6 w-6" />}
+          color={COLORS.qualified}
+        />
+        <StatCard
+          title="Interesse Médio"
+          value={stats.mediumInterest}
+          total={stats.total}
+          icon={<Target className="h-6 w-6" />}
+          color={COLORS.medium}
+        />
+        <StatCard
+          title="Taxa de Conversão"
+          value={stats.converted}
+          total={stats.total}
+          icon={<TrendingUp className="h-6 w-6" />}
+          color={COLORS.converted}
+        />
+      </div>
+
+      {/* Filters */}
       <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Filtros</h2>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
             <input
@@ -262,7 +335,7 @@ export const Reports: React.FC = () => {
         </div>
       </div>
 
-      {/* Gráficos */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">
@@ -279,14 +352,35 @@ export const Reports: React.FC = () => {
                   outerRadius={100}
                   paddingAngle={5}
                   dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                 >
                   {getColumnStats().map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white p-3 shadow-lg rounded-lg border">
+                          <p className="font-medium">{data.name}</p>
+                          <p className="text-sm text-gray-600">
+                            {data.value} leads ({((data.value / stats.total) * 100).toFixed(1)}%)
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Legend
+                  layout="vertical"
+                  align="right"
+                  verticalAlign="middle"
+                  formatter={(value, entry: any) => (
+                    <span className="text-sm">{value}</span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -297,25 +391,43 @@ export const Reports: React.FC = () => {
             Leads por Etiqueta
           </h3>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={getLabelStats()}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="value" name="Leads">
-                  {getLabelStats().map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {getLabelStats().length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={getLabelStats()} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" />
+                  <YAxis dataKey="name" type="category" width={150} />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 shadow-lg rounded-lg border">
+                            <p className="font-medium">{data.name}</p>
+                            <p className="text-sm text-gray-600">
+                              {data.value} leads ({((data.value / stats.total) * 100).toFixed(1)}%)
+                            </p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="value" fill={COLORS.default} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-gray-500 text-center">
+                  Nenhum lead com etiqueta ainda
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Lista de Leads */}
+      {/* Leads Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800">
@@ -363,7 +475,10 @@ export const Reports: React.FC = () => {
                         inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                         text-white
                       `}
-                      style={{ backgroundColor: statusColors[lead.columns?.name] || '#3b82f6' }}
+                      style={{ 
+                        backgroundColor: lead.columns?.name.toLowerCase().includes('fechado') ? 
+                          COLORS.converted : COLORS.default 
+                      }}
                     >
                       {lead.columns?.name}
                     </span>
@@ -374,9 +489,7 @@ export const Reports: React.FC = () => {
                         <span
                           key={assignment.lead_labels.id}
                           className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium text-white"
-                          style={{
-                            backgroundColor: labelColors[assignment.lead_labels.name.toLowerCase() as keyof typeof labelColors] || labelColors.default
-                          }}
+                          style={{ backgroundColor: COLORS.default }}
                         >
                           {assignment.lead_labels.name}
                         </span>
