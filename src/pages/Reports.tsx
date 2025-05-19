@@ -96,7 +96,6 @@ export const Reports: React.FC = () => {
         if (leadsData) {
           setLeads(leadsData);
           
-          // Calculate stats
           const total = leadsData.length;
           const qualified = leadsData.filter(lead => {
             const interest = parseInt(lead.interest || '0');
@@ -208,6 +207,23 @@ export const Reports: React.FC = () => {
     );
   }
 
+  const customLegendRenderer = (props: any) => {
+    const { payload } = props;
+    return (
+      <div className="flex flex-wrap justify-center gap-4 px-4 py-6 text-sm">
+        {payload.map((entry: any, index: number) => (
+          <div key={`legend-${index}`} className="flex items-center min-w-[120px] max-w-full">
+            <div
+              className="w-3 h-3 rounded-full mr-2"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-gray-700 break-words">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
@@ -247,7 +263,6 @@ export const Reports: React.FC = () => {
         </Button>
       </div>
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total de Leads"
@@ -279,7 +294,6 @@ export const Reports: React.FC = () => {
         />
       </div>
 
-      {/* Filters */}
       <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Filtros</h2>
         
@@ -338,7 +352,6 @@ export const Reports: React.FC = () => {
         </div>
       </div>
 
-      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
@@ -378,14 +391,10 @@ export const Reports: React.FC = () => {
                     }}
                   />
                   <Legend
+                    content={customLegendRenderer}
                     layout="horizontal"
                     verticalAlign="bottom"
                     align="center"
-                    wrapperStyle={{
-                      paddingTop: '20px',
-                      width: '100%',
-                      textAlign: 'center'
-                    }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -438,7 +447,6 @@ export const Reports: React.FC = () => {
         </div>
       </div>
 
-      {/* Leads Table */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="p-6 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-800">
