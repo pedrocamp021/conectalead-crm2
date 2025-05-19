@@ -5,10 +5,12 @@ import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Save, Loader2 } from 'lucide-react';
 import { useToast } from '../components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export const Preferences: React.FC = () => {
-  const { client } = useAppStore();
+  const { client, fetchUserData } = useAppStore();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [preferences, setPreferences] = useState({
     defaultView: 'kanban',
@@ -18,9 +20,11 @@ export const Preferences: React.FC = () => {
 
   useEffect(() => {
     const loadPreferences = () => {
-      const savedPrefs = localStorage.getItem(`preferences_${client?.id}`);
-      if (savedPrefs) {
-        setPreferences(JSON.parse(savedPrefs));
+      if (client) {
+        setPreferences(prev => ({
+          ...prev,
+          defaultView: client.default_view || 'kanban'
+        }));
       }
       setIsLoading(false);
     };
@@ -28,17 +32,29 @@ export const Preferences: React.FC = () => {
     loadPreferences();
   }, [client]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (!client) return;
+
     try {
-      localStorage.setItem(
-        `preferences_${client?.id}`,
-        JSON.stringify(preferences)
-      );
+      const { error } = await supabase
+        .from('clients')
+        .update({
+          default_view: preferences.defaultView
+        })
+        .eq('id', client.id);
+
+      if (error) throw error;
+
+      // Update local client data
+      await fetchUserData();
 
       toast({
         title: "Preferências salvas",
         description: "Suas configurações foram atualizadas com sucesso.",
       });
+
+      // Navigate to selected view
+      navigate(`/${preferences.defaultView}`);
     } catch (error) {
       console.error('Erro ao salvar preferências:', error);
       toast({
@@ -84,9 +100,12 @@ export const Preferences: React.FC = () => {
                 })}
               >
                 <option value="kanban">Kanban</option>
-                <option value="list">Lista</option>
-                <option value="table">Tabela</option>
+                <option value="leads-list">Lista</option>
+                <option value="leads-table">Tabela</option>
               </select>
+              <p className="mt-1 text-sm text-gray-500">
+                Esta será sua visualização inicial ao acessar o sistema
+              </p>
             </div>
 
             <div className="flex items-center space-x-2">
