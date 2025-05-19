@@ -199,6 +199,23 @@ export const Reports: React.FC = () => {
     );
   };
 
+  const customLegendRenderer = (props: any) => {
+    const { payload } = props;
+    return (
+      <div className="flex flex-wrap justify-center gap-4 px-4 py-6">
+        {payload.map((entry: any, index: number) => (
+          <div key={`legend-${index}`} className="flex items-center min-w-[120px] max-w-[200px] px-2">
+            <div
+              className="w-3 h-3 rounded-full mr-2 flex-shrink-0"
+              style={{ backgroundColor: entry.color }}
+            />
+            <span className="text-sm text-gray-700 break-words">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -206,23 +223,6 @@ export const Reports: React.FC = () => {
       </div>
     );
   }
-
-  const customLegendRenderer = (props: any) => {
-    const { payload } = props;
-    return (
-      <div className="flex flex-wrap justify-center gap-4 px-4 py-6 text-sm">
-        {payload.map((entry: any, index: number) => (
-          <div key={`legend-${index}`} className="flex items-center min-w-[120px] max-w-full">
-            <div
-              className="w-3 h-3 rounded-full mr-2"
-              style={{ backgroundColor: entry.color }}
-            />
-            <span className="text-gray-700 break-words">{entry.value}</span>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-8">
@@ -353,11 +353,11 @@ export const Reports: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm">
+        <div className="bg-white p-6 rounded-lg shadow-sm overflow-hidden">
           <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
             Distribuição por Coluna
           </h3>
-          <div className="min-w-[400px] overflow-x-auto">
+          <div className="min-w-[400px] max-w-full overflow-x-auto">
             <div className="h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
