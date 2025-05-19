@@ -221,6 +221,7 @@ const KanbanColumn: React.FC<KanbanColumnProps> = ({
                 ref={provided.innerRef}
                 {...provided.droppableProps}
                 className="p-2 flex-1 overflow-y-auto"
+                style={{ minHeight: "100px" }}
               >
                 {column.leads?.map((lead, index) => (
                   <Draggable 
