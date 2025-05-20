@@ -69,53 +69,56 @@ export const AdminPrevisao: React.FC = () => {
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
-    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
-    const nextMonth = new Date(currentYear, currentMonth + 1, 1);
-    const lastDayOfNextMonth = new Date(currentYear, currentMonth + 2, 0);
-
-    // Received amount this month (already correct, keeping as is)
+    
+    // Received amount this month (already paid)
     const receivedAmount = clients
       .filter(client => {
-        const paymentDate = client.data_pagamento_real || client.data_pagamento_atual;
-        if (!paymentDate || !client.pagamento_confirmado) return false;
-        const date = new Date(paymentDate);
-        return date.getMonth() === currentMonth && date.getFullYear() === currentYear;
+        if (!client.data_pagamento_real || !client.pagamento_confirmado) return false;
+        
+        // Convert UTC date to local (Brazil) time
+        const paymentDate = new Date(client.data_pagamento_real);
+        const brazilDate = new Date(paymentDate.getTime() - (3 * 60 * 60 * 1000)); // UTC-3
+        
+        return brazilDate.getMonth() === currentMonth && 
+               brazilDate.getFullYear() === currentYear;
       })
-      .reduce((sum, client) => {
-        return sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee);
-      }, 0);
+      .reduce((sum, client) => sum + (client.monthly_fee || 0), 0);
 
     // Amount to receive this month (pending payments)
     const pendingAmount = clients
       .filter(client => {
         if (!client.proxima_data_pagamento || client.pagamento_confirmado) return false;
+        
+        // Convert UTC date to local (Brazil) time
         const dueDate = new Date(client.proxima_data_pagamento);
-        return dueDate >= firstDayOfMonth && dueDate <= lastDayOfMonth &&
-               (client.status === 'pendente' || client.status === 'inadimplente');
+        const brazilDate = new Date(dueDate.getTime() - (3 * 60 * 60 * 1000)); // UTC-3
+        
+        return brazilDate.getMonth() === currentMonth && 
+               brazilDate.getFullYear() === currentYear &&
+               client.status === 'ativo' &&
+               (client.monthly_fee || 0) > 0;
       })
-      .reduce((sum, client) => {
-        return sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee);
-      }, 0);
+      .reduce((sum, client) => sum + (client.monthly_fee || 0), 0);
 
-    // Next month forecast (including recurring payments)
+    // Next month forecast
+    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 1);
+    const lastDayNextMonth = new Date(today.getFullYear(), today.getMonth() + 2, 0);
+    
     const nextMonthForecast = clients
       .filter(client => {
-        if (client.status === 'cancelado') return false;
+        if (client.status === 'inativo') return false;
         if (!client.proxima_data_pagamento) return false;
         
+        // Convert UTC date to local (Brazil) time
         const dueDate = new Date(client.proxima_data_pagamento);
-        const isNextMonth = dueDate >= nextMonth && dueDate <= lastDayOfNextMonth;
+        const brazilDate = new Date(dueDate.getTime() - (3 * 60 * 60 * 1000)); // UTC-3
         
-        // Include active clients with recurring payments
-        const isActiveRecurring = client.status === 'ativo' && client.data_pagamento_real;
+        const isNextMonth = brazilDate >= nextMonth && brazilDate <= lastDayNextMonth;
+        const isActiveRecurring = client.status === 'ativo' && client.monthly_fee > 0;
         
         return isNextMonth || isActiveRecurring;
       })
-      .reduce((sum, client) => {
-        // Use monthly_fee for recurring payments, initial_fee for new clients
-        return sum + (client.data_pagamento_real ? client.monthly_fee : client.initial_fee);
-      }, 0);
+      .reduce((sum, client) => sum + (client.monthly_fee || 0), 0);
 
     return {
       received: receivedAmount,
