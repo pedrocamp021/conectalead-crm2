@@ -4,7 +4,7 @@ import { useAppStore } from '../../lib/store';
 import { 
   LayoutDashboard, Users, LogOut, X, MessageSquare, 
   BarChart2, Settings, HelpCircle, User, Kanban,
-  Eye, Phone, Plug
+  Eye, Phone, Plug, DollarSign
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -97,6 +97,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
           name: 'Controle de Pagamentos',
           path: '/admin/payments',
           icon: <Settings className="w-5 h-5" />,
+        },
+        {
+          name: 'Pagamentos (Beta)',
+          path: '/admin/payments-beta',
+          icon: <DollarSign className="w-5 h-5" />,
         }
       ]
     }

@@ -11,6 +11,7 @@ import { AdminKanban } from './components/admin/AdminKanban';
 import { AdminAutomacao } from './components/admin/AdminAutomacao';
 import { AdminPrevisao } from './components/admin/AdminPrevisao';
 import { AdminPagamentos } from './components/admin/AdminPagamentos';
+import { AdminPaymentsBeta } from './components/admin/AdminPaymentsBeta';
 import { AdminConfiguracao } from './components/admin/AdminConfiguracao';
 import { AdminRecorrencia } from './components/admin/AdminRecorrencia';
 import { KanbanBoard } from './components/kanban/KanbanBoard';
@@ -69,6 +70,7 @@ function App() {
           <Route path="/admin/billing" element={<AdminAutomacao />} />
           <Route path="/admin/forecast" element={<AdminPrevisao />} />
           <Route path="/admin/payments" element={<AdminPagamentos />} />
+          <Route path="/admin/payments-beta" element={<AdminPaymentsBeta />} />
           <Route path="/admin/config" element={<AdminConfiguracao />} />
           <Route path="/admin/recurrence" element={<AdminRecorrencia />} />
         </Route>
