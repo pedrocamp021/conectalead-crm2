@@ -345,3 +345,5 @@ export default function AdminPagamentos() {
     </div>
   );
 }
+
+export { AdminPagamentos }
