@@ -4,7 +4,7 @@ import { useAppStore } from '../../lib/store';
 import { 
   LayoutDashboard, Users, LogOut, X, MessageSquare, 
   BarChart2, Settings, HelpCircle, User, Kanban,
-  Eye, Phone, Plug
+  Eye, Phone, Plug, DollarSign, Calendar
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -89,14 +89,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       group: 'Financeiro',
       items: [
         {
-          name: 'Previsão de Cobranças',
-          path: '/admin/forecast',
-          icon: <BarChart2 className="w-5 h-5" />,
-        },
-        {
           name: 'Controle de Pagamentos',
           path: '/admin/payments',
-          icon: <Settings className="w-5 h-5" />,
+          icon: <DollarSign className="w-5 h-5" />,
+        },
+        {
+          name: 'Previsão de Cobranças',
+          path: '/admin/forecast',
+          icon: <Calendar className="w-5 h-5" />,
         }
       ]
     }
@@ -125,9 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
         <div className="h-16 flex items-center justify-between px-4 lg:justify-center">
           <Link to="/dashboard" className="flex items-center">
             <div className="rounded-md bg-blue-600 text-white p-1.5">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
+              <LayoutDashboard className="h-6 w-6" />
             </div>
             <span className="ml-2 text-xl font-semibold">ConectaLead</span>
           </Link>

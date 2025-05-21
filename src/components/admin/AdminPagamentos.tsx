@@ -6,231 +6,339 @@ import { Input } from '../ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Search, Filter, Calendar, DollarSign, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 
-interface Client {
+interface Payment {
   id: string;
-  name: string;
-  status: string;
-  data_pagamento_atual: string | null;
-  data_pagamento_real: string | null;
-  proxima_data_pagamento: string | null;
-  pagamento_confirmado: boolean;
-  valor_mensal: number;
+  client_id: string;
+  due_date: string;
+  payment_date: string | null;
+  status: 'pending' | 'paid' | 'late';
+  amount: number;
+  reference_month: string;
+  paid_early: boolean;
+  clients?: {
+    name: string;
+    email: string;
+  };
 }
 
 export const AdminPagamentos: React.FC = () => {
   const { toast } = useToast();
-  const [clients, setClients] = useState<Client[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [paymentFilter, setPaymentFilter] = useState('');
-  const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [paymentDate, setPaymentDate] = useState('');
-  const [referenceMonth, setReferenceMonth] = useState('');
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   useEffect(() => {
-    fetchClients();
+    fetchPayments();
   }, []);
 
-  const fetchClients = async () => {
+  const fetchPayments = async () => {
     try {
       const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .order('name');
+        .from('payments')
+        .select(`
+          *,
+          clients (
+            name,
+            email
+          )
+        `)
+        .order('due_date');
 
       if (error) throw error;
-      setClients(data || []);
+      setPayments(data || []);
     } catch (error) {
-      console.error('Error fetching clients:', error);
+      console.error('Error fetching payments:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to fetch clients',
-        variant: 'destructive',
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível carregar os pagamentos.",
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePaymentConfirmation = async (client: Client) => {
-    setSelectedClient(client);
-    setIsPaymentModalOpen(true);
-  };
-
-  const confirmPayment = async () => {
-    if (!selectedClient || !paymentDate || !referenceMonth) return;
+  const handleConfirmPayment = async () => {
+    if (!selectedPayment || !paymentDate) return;
 
     try {
       const { error } = await supabase
-        .from('clients')
+        .from('payments')
         .update({
-          data_pagamento_real: paymentDate,
-          pagamento_confirmado: true,
-          data_pagamento_atual: referenceMonth,
-          proxima_data_pagamento: new Date(referenceMonth).setMonth(new Date(referenceMonth).getMonth() + 1),
+          status: 'paid',
+          payment_date: paymentDate,
+          paid_early: new Date(paymentDate) < new Date(selectedPayment.due_date)
         })
-        .eq('id', selectedClient.id);
+        .eq('id', selectedPayment.id);
 
       if (error) throw error;
 
       toast({
-        title: 'Success',
-        description: 'Payment confirmed successfully',
+        title: "Pagamento confirmado",
+        description: "O status do pagamento foi atualizado com sucesso.",
       });
 
-      setIsPaymentModalOpen(false);
-      setSelectedClient(null);
+      setIsConfirmModalOpen(false);
+      setSelectedPayment(null);
       setPaymentDate('');
-      setReferenceMonth('');
-      fetchClients();
+      fetchPayments();
     } catch (error) {
       console.error('Error confirming payment:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to confirm payment',
-        variant: 'destructive',
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível confirmar o pagamento.",
       });
     }
   };
 
-  const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !statusFilter || client.status === statusFilter;
-    const matchesPayment = !paymentFilter || 
-      (paymentFilter === 'paid' && client.pagamento_confirmado) ||
-      (paymentFilter === 'pending' && !client.pagamento_confirmado);
-    
-    let matchesDate = true;
-    if (dateFilter.start && dateFilter.end) {
-      const paymentDate = new Date(client.data_pagamento_atual || '');
-      const startDate = new Date(dateFilter.start);
-      const endDate = new Date(dateFilter.end);
-      matchesDate = paymentDate >= startDate && paymentDate <= endDate;
-    }
+  const getPaymentStats = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
 
-    return matchesSearch && matchesStatus && matchesPayment && matchesDate;
+    const monthlyPayments = payments.filter(payment => {
+      const paymentDate = new Date(payment.due_date);
+      return paymentDate.getMonth() === currentMonth && 
+             paymentDate.getFullYear() === currentYear;
+    });
+
+    const received = monthlyPayments
+      .filter(p => p.status === 'paid')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    const pending = monthlyPayments
+      .filter(p => p.status === 'pending')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    const late = monthlyPayments
+      .filter(p => p.status === 'late')
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    return { received, pending, late };
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
+
+  const filteredPayments = payments.filter(payment => {
+    const matchesSearch = payment.clients?.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = !statusFilter || payment.status === statusFilter;
+    const matchesDate = (!dateRange.start || new Date(payment.due_date) >= new Date(dateRange.start)) &&
+                       (!dateRange.end || new Date(payment.due_date) <= new Date(dateRange.end));
+    return matchesSearch && matchesStatus && matchesDate;
   });
 
+  const stats = getPaymentStats();
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex flex-col gap-6">
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <Input
-              placeholder="Search clients..."
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-800">Controle de Pagamentos</h2>
+        <p className="text-gray-600">Gerencie os pagamentos dos clientes</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <DollarSign className="h-8 w-8 text-green-500" />
+            <span className="text-sm font-medium text-green-500 bg-green-50 px-2 py-1 rounded-full">
+              Recebido
+            </span>
+          </div>
+          <div className="text-2xl font-bold text-gray-900">
+            {formatCurrency(stats.received)}
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <Clock className="h-8 w-8 text-yellow-500" />
+            <span className="text-sm font-medium text-yellow-500 bg-yellow-50 px-2 py-1 rounded-full">
+              A Receber
+            </span>
+          </div>
+          <div className="text-2xl font-bold text-gray-900">
+            {formatCurrency(stats.pending)}
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <XCircle className="h-8 w-8 text-red-500" />
+            <span className="text-sm font-medium text-red-500 bg-red-50 px-2 py-1 rounded-full">
+              Atrasado
+            </span>
+          </div>
+          <div className="text-2xl font-bold text-gray-900">
+            {formatCurrency(stats.late)}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1 relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
+            <input
+              type="text"
+              placeholder="Buscar por nome do cliente..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              icon={<Search className="w-4 h-4" />}
             />
           </div>
+
           <select
-            className="border rounded p-2"
+            className="px-3 py-2 border border-gray-300 rounded-md"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
+            <option value="">Todos os status</option>
+            <option value="pending">Pendente</option>
+            <option value="paid">Pago</option>
+            <option value="late">Atrasado</option>
           </select>
-          <select
-            className="border rounded p-2"
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value)}
-          >
-            <option value="">All Payments</option>
-            <option value="paid">Paid</option>
-            <option value="pending">Pending</option>
-          </select>
-          <Input
-            type="date"
-            value={dateFilter.start}
-            onChange={(e) => setDateFilter(prev => ({ ...prev, start: e.target.value }))}
-          />
-          <Input
-            type="date"
-            value={dateFilter.end}
-            onChange={(e) => setDateFilter(prev => ({ ...prev, end: e.target.value }))}
-          />
-        </div>
 
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <Loader2 className="w-8 h-8 animate-spin" />
+          <div className="flex space-x-2">
+            <Input
+              type="date"
+              value={dateRange.start}
+              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              placeholder="Data inicial"
+            />
+            <Input
+              type="date"
+              value={dateRange.end}
+              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              placeholder="Data final"
+            />
           </div>
-        ) : (
-          <div className="grid gap-4">
-            {filteredClients.map(client => (
-              <div
-                key={client.id}
-                className="bg-white p-4 rounded-lg shadow flex items-center justify-between"
-              >
-                <div>
-                  <h3 className="font-semibold">{client.name}</h3>
-                  <p className="text-sm text-gray-500">
-                    Status: {client.status}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    Monthly Value: ${client.valor_mensal}
-                  </p>
-                </div>
-                <div className="flex items-center gap-4">
-                  {client.pagamento_confirmado ? (
-                    <div className="flex items-center text-green-600">
-                      <CheckCircle className="w-5 h-5 mr-2" />
-                      Paid
-                    </div>
-                  ) : (
-                    <div className="flex items-center text-red-600">
-                      <XCircle className="w-5 h-5 mr-2" />
-                      Pending
-                    </div>
-                  )}
-                  <Button
-                    onClick={() => handlePaymentConfirmation(client)}
-                    disabled={client.pagamento_confirmado}
-                  >
-                    Confirm Payment
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        </div>
       </div>
 
-      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Cliente
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Valor
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Vencimento
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Status
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Ações
+              </th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {filteredPayments.map((payment) => (
+              <tr key={payment.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-gray-900">
+                    {payment.clients?.name}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {payment.clients?.email}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm text-gray-900">
+                    {formatCurrency(payment.amount)}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center text-sm text-gray-900">
+                    <Calendar className="h-4 w-4 text-gray-400 mr-1" />
+                    {new Date(payment.due_date).toLocaleDateString()}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`
+                    inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                    ${payment.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
+                    ${payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
+                    ${payment.status === 'late' ? 'bg-red-100 text-red-800' : ''}
+                  `}>
+                    {payment.status === 'paid' && 'Pago'}
+                    {payment.status === 'pending' && 'Pendente'}
+                    {payment.status === 'late' && 'Atrasado'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  {payment.status !== 'paid' && (
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedPayment(payment);
+                        setIsConfirmModalOpen(true);
+                      }}
+                      icon={<CheckCircle className="h-4 w-4" />}
+                    >
+                      Confirmar Pagamento
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirm Payment</DialogTitle>
+            <DialogTitle>Confirmar Pagamento</DialogTitle>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <label>Payment Date</label>
-              <Input
-                type="date"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-              />
+          
+          <div className="space-y-4 mt-4">
+            <Input
+              label="Data do Pagamento"
+              type="date"
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+            />
+
+            <div className="flex justify-end space-x-2">
+              <Button
+                variant="ghost"
+                onClick={() => setIsConfirmModalOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleConfirmPayment}
+                disabled={!paymentDate}
+              >
+                Confirmar
+              </Button>
             </div>
-            <div className="grid gap-2">
-              <label>Reference Month</label>
-              <Input
-                type="month"
-                value={referenceMonth}
-                onChange={(e) => setReferenceMonth(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="flex justify-end gap-4">
-            <Button variant="outline" onClick={() => setIsPaymentModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button onClick={confirmPayment}>
-              Confirm
-            </Button>
           </div>
         </DialogContent>
       </Dialog>
