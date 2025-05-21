@@ -17,6 +17,12 @@ interface Client {
   monthly_fee: number;
 }
 
+interface PaymentModalData {
+  client: Client;
+  referenceMonth: string;
+  paymentDate: string;
+}
+
 export const AdminPagamentos: React.FC = () => {
   const { toast } = useToast();
   const [clients, setClients] = useState<Client[]>([]);
@@ -25,55 +31,72 @@ export const AdminPagamentos: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [paymentFilter, setPaymentFilter] = useState('');
   const [dateFilter, setDateFilter] = useState({ start: '', end: '' });
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
-  const [paymentDate, setPaymentDate] = useState('');
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentModal, setPaymentModal] = useState<PaymentModalData | null>(null);
+  const [monthlyStats, setMonthlyStats] = useState({
+    received: 0,
+    pending: 0,
+    nextMonth: 0
+  });
+
+  const calculateMonthlyStats = (clientsData: Client[]) => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    // Received amount (paid this month)
+    const received = clientsData
+      .filter(client => {
+        if (!client.data_pagamento_real) return false;
+        const paymentDate = new Date(client.data_pagamento_real);
+        const brazilDate = new Date(paymentDate.getTime() - (3 * 60 * 60 * 1000));
+        return brazilDate.getMonth() === currentMonth && 
+               brazilDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, client) => sum + (client.monthly_fee || 0), 0);
+
+    // Pending amount (due this month, not paid)
+    const pending = clientsData
+      .filter(client => {
+        if (!client.proxima_data_pagamento || client.pagamento_confirmado) return false;
+        if (client.status !== 'ativo') return false;
+        
+        const dueDate = new Date(client.proxima_data_pagamento);
+        const brazilDate = new Date(dueDate.getTime() - (3 * 60 * 60 * 1000));
+        
+        return brazilDate.getMonth() === currentMonth && 
+               brazilDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, client) => sum + (client.monthly_fee || 0), 0);
+
+    // Next month forecast
+    const nextMonth = clientsData
+      .filter(client => {
+        if (!client.proxima_data_pagamento || client.status !== 'ativo') return false;
+        
+        const dueDate = new Date(client.proxima_data_pagamento);
+        const brazilDate = new Date(dueDate.getTime() - (3 * 60 * 60 * 1000));
+        const nextMonthDate = new Date(currentYear, currentMonth + 1, 1);
+        
+        return brazilDate.getMonth() === nextMonthDate.getMonth() && 
+               !client.pagamento_confirmado;
+      })
+      .reduce((sum, client) => sum + (client.monthly_fee || 0), 0);
+
+    setMonthlyStats({ received, pending, nextMonth });
+  };
 
   const fetchClients = async () => {
     try {
       const { data, error } = await supabase
         .from('clients')
         .select('*')
-        .order('name');
+        .order('proxima_data_pagamento');
 
       if (error) throw error;
-
-      // Update status based on payment date
-      const updatedClients = (data || []).map(client => {
-        const today = new Date();
-        const nextPayment = new Date(today.getFullYear(), today.getMonth(), 12);
-        
-        if (!client.pagamento_confirmado) {
-          const diffDays = Math.floor((today.getTime() - nextPayment.getTime()) / (1000 * 60 * 60 * 24));
-          
-          if (diffDays > 4) {
-            return { ...client, status: 'inativo' };
-          } else if (diffDays >= 0) {
-            return { ...client, status: 'pendente' };
-          }
-        }
-        return client;
-      });
-
-      // Update any status changes in the database
-      const statusUpdates = updatedClients.filter(client => 
-        client.status !== (data?.find(c => c.id === client.id)?.status)
-      );
-
-      if (statusUpdates.length > 0) {
-        await Promise.all(
-          statusUpdates.map(client =>
-            supabase
-              .from('clients')
-              .update({ status: client.status })
-              .eq('id', client.id)
-          )
-        );
-      }
-
-      setClients(updatedClients);
+      setClients(data || []);
+      calculateMonthlyStats(data || []);
     } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
+      console.error('Erro ao buscar clientes:', error);
       toast({
         variant: "destructive",
         title: "Erro",
@@ -88,40 +111,45 @@ export const AdminPagamentos: React.FC = () => {
     fetchClients();
   }, []);
 
-  const getNextPaymentDate = () => {
-    const today = new Date();
-    const nextMonth = new Date(today.getFullYear(), today.getMonth() + 1, 12);
-    return nextMonth.toISOString();
-  };
-
   const handleConfirmPayment = async () => {
-    if (!selectedClient || !paymentDate) return;
+    if (!paymentModal) return;
 
     try {
-      const today = new Date();
-      const updates = {
-        data_pagamento_real: new Date(paymentDate).toISOString(),
-        data_pagamento_atual: today.toISOString(),
-        proxima_data_pagamento: getNextPaymentDate(),
-        pagamento_confirmado: true,
-        status: 'ativo'
-      };
+      const paymentDate = new Date(paymentModal.paymentDate);
+      const dueDate = new Date(paymentModal.client.proxima_data_pagamento || '');
+      const isPaidEarly = paymentDate < dueDate;
 
       const { error } = await supabase
-        .from('clients')
-        .update(updates)
-        .eq('id', selectedClient.id);
+        .from('payments')
+        .insert({
+          client_id: paymentModal.client.id,
+          reference_month: paymentModal.referenceMonth,
+          payment_date: paymentModal.paymentDate,
+          paid_early: isPaidEarly,
+          amount: paymentModal.client.monthly_fee,
+          status: 'paid'
+        });
 
       if (error) throw error;
+
+      // Update client status
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update({
+          data_pagamento_real: paymentModal.paymentDate,
+          pagamento_confirmado: true,
+          status: 'ativo'
+        })
+        .eq('id', paymentModal.client.id);
+
+      if (updateError) throw updateError;
 
       toast({
         title: "Pagamento confirmado",
         description: "O pagamento foi registrado com sucesso.",
       });
 
-      setIsPaymentModalOpen(false);
-      setSelectedClient(null);
-      setPaymentDate('');
+      setPaymentModal(null);
       fetchClients();
     } catch (error) {
       console.error('Erro ao confirmar pagamento:', error);
@@ -135,20 +163,13 @@ export const AdminPagamentos: React.FC = () => {
 
   const handleUnmarkPayment = async (client: Client) => {
     try {
-      const today = new Date();
-      const lastDueDate = new Date(today.getFullYear(), today.getMonth(), 12);
-      const diffDays = Math.floor((today.getTime() - lastDueDate.getTime()) / (1000 * 60 * 60 * 24));
-      
-      const updates = {
-        data_pagamento_real: null,
-        data_pagamento_atual: null,
-        pagamento_confirmado: false,
-        status: diffDays > 4 ? 'inativo' : 'pendente'
-      };
-
       const { error } = await supabase
         .from('clients')
-        .update(updates)
+        .update({
+          data_pagamento_real: null,
+          pagamento_confirmado: false,
+          status: 'pendente'
+        })
         .eq('id', client.id);
 
       if (error) throw error;
@@ -169,33 +190,48 @@ export const AdminPagamentos: React.FC = () => {
     }
   };
 
-  const filteredClients = clients.filter(client => {
-    const matchesSearch = client.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !statusFilter || client.status === statusFilter;
-    const matchesPayment = !paymentFilter || 
-      (paymentFilter === 'paid' && client.pagamento_confirmado) ||
-      (paymentFilter === 'unpaid' && !client.pagamento_confirmado);
-    const matchesDate = (!dateFilter.start || !client.proxima_data_pagamento || 
-      new Date(client.proxima_data_pagamento) >= new Date(dateFilter.start)) &&
-      (!dateFilter.end || !client.proxima_data_pagamento || 
-      new Date(client.proxima_data_pagamento) <= new Date(dateFilter.end));
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
+  };
 
-    return matchesSearch && matchesStatus && matchesPayment && matchesDate;
-  });
+  const formatReferenceMonth = (date: string) => {
+    const months = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    const d = new Date(date);
+    return `${months[d.getMonth()]}/${d.getFullYear()}`;
+  };
 
-  const getStatusBadge = (status: string) => {
-    const badges = {
-      ativo: { color: 'bg-green-100 text-green-800', icon: <CheckCircle className="w-3 h-3 mr-1" />, text: 'Ativo' },
-      inativo: { color: 'bg-red-100 text-red-800', icon: <XCircle className="w-3 h-3 mr-1" />, text: 'Inativo' },
-      pendente: { color: 'bg-yellow-100 text-yellow-800', icon: <Clock className="w-3 h-3 mr-1" />, text: 'Pendente' }
-    };
+  const getStatusBadge = (client: Client) => {
+    if (client.pagamento_confirmado) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          <CheckCircle className="w-3 h-3" />
+          Pago
+        </span>
+      );
+    }
 
-    const badge = badges[status as keyof typeof badges] || badges.pendente;
+    const dueDate = client.proxima_data_pagamento ? new Date(client.proxima_data_pagamento) : null;
+    const today = new Date();
     
+    if (dueDate && dueDate < today) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          <XCircle className="w-3 h-3" />
+          Atrasado
+        </span>
+      );
+    }
+
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.color}`}>
-        {badge.icon}
-        {badge.text}
+      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+        <Clock className="w-3 h-3" />
+        Pendente
       </span>
     );
   };
@@ -215,6 +251,46 @@ export const AdminPagamentos: React.FC = () => {
         <p className="text-gray-600 mt-1">Gerencie os pagamentos dos clientes</p>
       </div>
 
+      {/* Cards de resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Valor Recebido (Mês Atual)</p>
+              <h3 className="text-2xl font-bold text-green-600">
+                {formatCurrency(monthlyStats.received)}
+              </h3>
+            </div>
+            <DollarSign className="h-8 w-8 text-green-500" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">A Receber (Mês Atual)</p>
+              <h3 className="text-2xl font-bold text-blue-600">
+                {formatCurrency(monthlyStats.pending)}
+              </h3>
+            </div>
+            <DollarSign className="h-8 w-8 text-blue-500" />
+          </div>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500">Previsão (Próximo Mês)</p>
+              <h3 className="text-2xl font-bold text-gray-900">
+                {formatCurrency(monthlyStats.nextMonth)}
+              </h3>
+            </div>
+            <DollarSign className="h-8 w-8 text-gray-500" />
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros */}
       <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
@@ -229,24 +305,14 @@ export const AdminPagamentos: React.FC = () => {
           </div>
 
           <select
-            className="px-3 py-2 border border-gray-300 rounded-md"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">Todos os status</option>
-            <option value="ativo">Ativo</option>
-            <option value="inativo">Inativo</option>
-            <option value="pendente">Pendente</option>
-          </select>
-
-          <select
-            className="px-3 py-2 border border-gray-300 rounded-md"
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value)}
-          >
-            <option value="">Todos os pagamentos</option>
             <option value="paid">Pagos</option>
-            <option value="unpaid">Não pagos</option>
+            <option value="pending">Pendentes</option>
+            <option value="late">Atrasados</option>
           </select>
 
           <div className="flex space-x-2">
@@ -266,6 +332,7 @@ export const AdminPagamentos: React.FC = () => {
         </div>
       </div>
 
+      {/* Lista de Pagamentos */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -274,13 +341,10 @@ export const AdminPagamentos: React.FC = () => {
                 Cliente
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Data Real do Pagamento
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Próximo Vencimento
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Valor
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Vencimento
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
@@ -291,17 +355,22 @@ export const AdminPagamentos: React.FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filteredClients.map((client) => (
+            {clients.map((client) => (
               <tr key={client.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
-                  <div className="text-sm font-medium text-gray-900">{client.name}</div>
+                  <div className="text-sm font-medium text-gray-900">
+                    {client.name}
+                  </div>
+                  {client.pagamento_confirmado && client.data_pagamento_real && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      Referente a {formatReferenceMonth(client.data_pagamento_real)}
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {client.data_pagamento_real 
-                      ? new Date(client.data_pagamento_real).toLocaleDateString()
-                      : '-'
-                    }
+                  <div className="flex items-center text-sm text-gray-900">
+                    <DollarSign className="h-4 w-4 text-gray-400 mr-1" />
+                    {formatCurrency(client.monthly_fee || 0)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -313,16 +382,7 @@ export const AdminPagamentos: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center text-sm text-gray-900">
-                    <DollarSign className="h-4 w-4 text-gray-400 mr-1" />
-                    {new Intl.NumberFormat('pt-BR', {
-                      style: 'currency',
-                      currency: 'BRL'
-                    }).format(client.monthly_fee || 0)}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {getStatusBadge(client.status)}
+                  {getStatusBadge(client)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right">
                   {client.pagamento_confirmado ? (
@@ -339,8 +399,12 @@ export const AdminPagamentos: React.FC = () => {
                       variant="primary"
                       size="sm"
                       onClick={() => {
-                        setSelectedClient(client);
-                        setIsPaymentModalOpen(true);
+                        const today = new Date();
+                        setPaymentModal({
+                          client,
+                          referenceMonth: today.toISOString().split('T')[0],
+                          paymentDate: today.toISOString().split('T')[0]
+                        });
                       }}
                       icon={<CheckCircle className="h-4 w-4" />}
                     >
@@ -354,7 +418,8 @@ export const AdminPagamentos: React.FC = () => {
         </table>
       </div>
 
-      <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+      {/* Modal de Pagamento */}
+      <Dialog open={!!paymentModal} onOpenChange={() => setPaymentModal(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Registrar Pagamento</DialogTitle>
@@ -363,30 +428,51 @@ export const AdminPagamentos: React.FC = () => {
           <div className="space-y-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Data Real do Pagamento
+                Mês de Referência
+              </label>
+              <Input
+                type="month"
+                value={paymentModal?.referenceMonth.substring(0, 7)}
+                onChange={(e) => {
+                  if (paymentModal) {
+                    setPaymentModal({
+                      ...paymentModal,
+                      referenceMonth: `${e.target.value}-01`
+                    });
+                  }
+                }}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Data do Pagamento
               </label>
               <Input
                 type="date"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
+                value={paymentModal?.paymentDate}
+                onChange={(e) => {
+                  if (paymentModal) {
+                    setPaymentModal({
+                      ...paymentModal,
+                      paymentDate: e.target.value
+                    });
+                  }
+                }}
               />
             </div>
 
             <div className="flex justify-end space-x-2">
               <Button
                 variant="ghost"
-                onClick={() => {
-                  setIsPaymentModalOpen(false);
-                  setSelectedClient(null);
-                  setPaymentDate('');
-                }}
+                onClick={() => setPaymentModal(null)}
               >
                 Cancelar
               </Button>
               <Button
                 variant="primary"
                 onClick={handleConfirmPayment}
-                disabled={!paymentDate}
+                disabled={!paymentModal?.referenceMonth || !paymentModal?.paymentDate}
               >
                 Confirmar Pagamento
               </Button>
