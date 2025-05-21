@@ -7,12 +7,7 @@ import {
   Eye, Phone, Plug, DollarSign, Calendar
 } from 'lucide-react';
 
-interface SidebarProps {
-  isOpen: boolean;
-  onClose: () => void;
-}
-
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
+export default function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const location = useLocation();
   const { isAdmin, logout } = useAppStore();
 
@@ -208,4 +203,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
       </aside>
     </>
   );
-};
+}
+
+export { Sidebar }
