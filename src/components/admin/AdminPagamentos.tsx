@@ -4,7 +4,7 @@ import { useToast } from '../ui/use-toast';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Search, Filter, Calendar, DollarSign, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { Search, Filter, Calendar, DollarSign, CheckCircle, XCircle, Clock, Loader2, ArrowLeft } from 'lucide-react';
 
 interface Payment {
   id: string;
@@ -14,7 +14,7 @@ interface Payment {
   status: 'pending' | 'paid' | 'late';
   amount: number;
   reference_month: string;
-  paid_early: boolean;
+  payment_type: 'primeira' | 'mensalidade';
   clients?: {
     name: string;
     email: string;
@@ -28,9 +28,7 @@ export default function AdminPagamentos() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [paymentDate, setPaymentDate] = useState('');
+  const [editingPayment, setEditingPayment] = useState<{id: string, field: string, value: any} | null>(null);
 
   useEffect(() => {
     fetchPayments();
@@ -63,18 +61,15 @@ export default function AdminPagamentos() {
     }
   };
 
-  const handleConfirmPayment = async () => {
-    if (!selectedPayment || !paymentDate) return;
-
+  const handleConfirmPayment = async (payment: Payment) => {
     try {
       const { error } = await supabase
         .from('payments')
         .update({
           status: 'paid',
-          payment_date: paymentDate,
-          paid_early: new Date(paymentDate) < new Date(selectedPayment.due_date)
+          payment_date: new Date().toISOString()
         })
-        .eq('id', selectedPayment.id);
+        .eq('id', payment.id);
 
       if (error) throw error;
 
@@ -83,9 +78,6 @@ export default function AdminPagamentos() {
         description: "O status do pagamento foi atualizado com sucesso.",
       });
 
-      setIsConfirmModalOpen(false);
-      setSelectedPayment(null);
-      setPaymentDate('');
       fetchPayments();
     } catch (error) {
       console.error('Error confirming payment:', error);
@@ -97,30 +89,59 @@ export default function AdminPagamentos() {
     }
   };
 
-  const getPaymentStats = () => {
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
+  const handleRevertPayment = async (payment: Payment) => {
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({
+          status: 'pending',
+          payment_date: null
+        })
+        .eq('id', payment.id);
 
-    const monthlyPayments = payments.filter(payment => {
-      const paymentDate = new Date(payment.due_date);
-      return paymentDate.getMonth() === currentMonth && 
-             paymentDate.getFullYear() === currentYear;
-    });
+      if (error) throw error;
 
-    const received = monthlyPayments
-      .filter(p => p.status === 'paid')
-      .reduce((sum, p) => sum + p.amount, 0);
+      toast({
+        title: "Pagamento revertido",
+        description: "O status do pagamento foi revertido com sucesso.",
+      });
 
-    const pending = monthlyPayments
-      .filter(p => p.status === 'pending')
-      .reduce((sum, p) => sum + p.amount, 0);
+      fetchPayments();
+    } catch (error) {
+      console.error('Error reverting payment:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível reverter o pagamento.",
+      });
+    }
+  };
 
-    const late = monthlyPayments
-      .filter(p => p.status === 'late')
-      .reduce((sum, p) => sum + p.amount, 0);
+  const handleUpdateField = async (payment: Payment, field: string, value: any) => {
+    try {
+      const { error } = await supabase
+        .from('payments')
+        .update({ [field]: value })
+        .eq('id', payment.id);
 
-    return { received, pending, late };
+      if (error) throw error;
+
+      toast({
+        title: "Pagamento atualizado",
+        description: "O pagamento foi atualizado com sucesso.",
+      });
+
+      fetchPayments();
+    } catch (error) {
+      console.error('Error updating payment:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro",
+        description: "Não foi possível atualizar o pagamento.",
+      });
+    } finally {
+      setEditingPayment(null);
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -138,8 +159,6 @@ export default function AdminPagamentos() {
     return matchesSearch && matchesStatus && matchesDate;
   });
 
-  const stats = getPaymentStats();
-
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -153,44 +172,6 @@ export default function AdminPagamentos() {
       <div>
         <h2 className="text-2xl font-bold text-gray-800">Controle de Pagamentos</h2>
         <p className="text-gray-600">Gerencie os pagamentos dos clientes</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <DollarSign className="h-8 w-8 text-green-500" />
-            <span className="text-sm font-medium text-green-500 bg-green-50 px-2 py-1 rounded-full">
-              Recebido
-            </span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900">
-            {formatCurrency(stats.received)}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <Clock className="h-8 w-8 text-yellow-500" />
-            <span className="text-sm font-medium text-yellow-500 bg-yellow-50 px-2 py-1 rounded-full">
-              A Receber
-            </span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900">
-            {formatCurrency(stats.pending)}
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm">
-          <div className="flex items-center justify-between mb-4">
-            <XCircle className="h-8 w-8 text-red-500" />
-            <span className="text-sm font-medium text-red-500 bg-red-50 px-2 py-1 rounded-full">
-              Atrasado
-            </span>
-          </div>
-          <div className="text-2xl font-bold text-gray-900">
-            {formatCurrency(stats.late)}
-          </div>
-        </div>
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
@@ -242,6 +223,9 @@ export default function AdminPagamentos() {
                 Cliente
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tipo
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Valor
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -267,15 +251,67 @@ export default function AdminPagamentos() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">
-                    {formatCurrency(payment.amount)}
-                  </div>
+                  <span className="text-sm text-gray-900 capitalize">
+                    {payment.payment_type}
+                  </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center text-sm text-gray-900">
-                    <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                    {new Date(payment.due_date).toLocaleDateString()}
-                  </div>
+                  {editingPayment?.id === payment.id && editingPayment?.field === 'amount' ? (
+                    <input
+                      type="number"
+                      className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
+                      value={editingPayment.value}
+                      onChange={(e) => setEditingPayment({
+                        ...editingPayment,
+                        value: parseFloat(e.target.value)
+                      })}
+                      onBlur={() => handleUpdateField(payment, 'amount', editingPayment.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleUpdateField(payment, 'amount', editingPayment.value);
+                        }
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <div 
+                      className="text-sm text-gray-900 cursor-pointer hover:text-blue-600"
+                      onClick={() => setEditingPayment({
+                        id: payment.id,
+                        field: 'amount',
+                        value: payment.amount
+                      })}
+                    >
+                      {formatCurrency(payment.amount)}
+                    </div>
+                  )}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {editingPayment?.id === payment.id && editingPayment?.field === 'due_date' ? (
+                    <input
+                      type="date"
+                      className="w-40 px-2 py-1 border border-gray-300 rounded text-sm"
+                      value={editingPayment.value}
+                      onChange={(e) => setEditingPayment({
+                        ...editingPayment,
+                        value: e.target.value
+                      })}
+                      onBlur={() => handleUpdateField(payment, 'due_date', editingPayment.value)}
+                      autoFocus
+                    />
+                  ) : (
+                    <div 
+                      className="flex items-center text-sm text-gray-900 cursor-pointer hover:text-blue-600"
+                      onClick={() => setEditingPayment({
+                        id: payment.id,
+                        field: 'due_date',
+                        value: payment.due_date.split('T')[0]
+                      })}
+                    >
+                      <Calendar className="h-4 w-4 text-gray-400 mr-1" />
+                      {new Date(payment.due_date).toLocaleDateString()}
+                    </div>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`
@@ -290,58 +326,33 @@ export default function AdminPagamentos() {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {payment.status !== 'paid' && (
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedPayment(payment);
-                        setIsConfirmModalOpen(true);
-                      }}
-                      icon={<CheckCircle className="h-4 w-4" />}
-                    >
-                      Confirmar Pagamento
-                    </Button>
-                  )}
+                  <div className="flex justify-end space-x-2">
+                    {payment.status === 'pending' ? (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => handleConfirmPayment(payment)}
+                        icon={<CheckCircle className="h-4 w-4" />}
+                      >
+                        Confirmar
+                      </Button>
+                    ) : payment.status === 'paid' ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRevertPayment(payment)}
+                        icon={<ArrowLeft className="h-4 w-4" />}
+                      >
+                        Reverter
+                      </Button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Pagamento</DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 mt-4">
-            <Input
-              label="Data do Pagamento"
-              type="date"
-              value={paymentDate}
-              onChange={(e) => setPaymentDate(e.target.value)}
-            />
-
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="ghost"
-                onClick={() => setIsConfirmModalOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button
-                variant="primary"
-                onClick={handleConfirmPayment}
-                disabled={!paymentDate}
-              >
-                Confirmar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
