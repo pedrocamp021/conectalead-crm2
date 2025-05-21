@@ -20,6 +20,8 @@ interface EditClientModalProps {
     billing_message: string;
     initial_fee: number;
     monthly_fee: number;
+    data_base_cliente: string;
+    valor_mensal: number;
   } | null;
   onUpdate: () => void;
 }
@@ -31,6 +33,8 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
   onUpdate 
 }) => {
   const { isAdmin } = useAppStore();
+  const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -40,10 +44,10 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
     whatsapp: '',
     billing_message: '',
     initial_fee: '0.00',
-    monthly_fee: '0.00'
+    monthly_fee: '0.00',
+    data_base_cliente: '',
+    valor_mensal: '0.00'
   });
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
     if (client) {
@@ -55,23 +59,17 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
         status: client.status,
         whatsapp: client.whatsapp || '',
         billing_message: client.billing_message || '',
-        initial_fee: (client.initial_fee || 0).toFixed(2),
-        monthly_fee: (client.monthly_fee || 0).toFixed(2)
+        initial_fee: client.initial_fee.toFixed(2),
+        monthly_fee: client.monthly_fee.toFixed(2),
+        data_base_cliente: client.data_base_cliente || new Date().toISOString().split('T')[0],
+        valor_mensal: client.valor_mensal.toFixed(2)
       });
     }
   }, [client]);
 
   const formatCurrency = (value: string) => {
-    // Remove non-numeric characters and convert to number
     const numericValue = value.replace(/[^0-9]/g, '');
-    
-    // Handle empty or invalid input
-    if (!numericValue) return '0.00';
-    
-    // Convert to decimal (divide by 100 to handle cents)
     const floatValue = parseFloat(numericValue) / 100;
-    
-    // Format with 2 decimal places
     return floatValue.toFixed(2);
   };
 
@@ -89,15 +87,60 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
         whatsapp: formData.whatsapp,
         billing_message: formData.billing_message,
         initial_fee: parseFloat(formData.initial_fee),
-        monthly_fee: parseFloat(formData.monthly_fee)
+        monthly_fee: parseFloat(formData.monthly_fee),
+        data_base_cliente: formData.data_base_cliente,
+        valor_mensal: parseFloat(formData.valor_mensal)
       };
 
-      const { error } = await supabase
+      const { error: updateError } = await supabase
         .from('clients')
         .update(updates)
         .eq('id', client.id);
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Generate or update payment record if client is active and has monthly fee
+      if (formData.status === 'ativo' && parseFloat(formData.valor_mensal) > 0) {
+        const dueDate = new Date(formData.data_base_cliente);
+        
+        // Check for existing pending payment
+        const { data: existingPayment, error: checkError } = await supabase
+          .from('payments')
+          .select('*')
+          .eq('client_id', client.id)
+          .eq('status', 'pending')
+          .single();
+
+        if (checkError && checkError.code !== 'PGRST116') throw checkError;
+
+        if (existingPayment) {
+          // Update existing payment
+          const { error: updatePaymentError } = await supabase
+            .from('payments')
+            .update({
+              due_date: dueDate.toISOString(),
+              amount: parseFloat(formData.valor_mensal),
+              reference_month: dueDate.toISOString()
+            })
+            .eq('id', existingPayment.id);
+
+          if (updatePaymentError) throw updatePaymentError;
+        } else {
+          // Create new payment
+          const { error: createPaymentError } = await supabase
+            .from('payments')
+            .insert([{
+              client_id: client.id,
+              due_date: dueDate.toISOString(),
+              reference_month: dueDate.toISOString(),
+              status: 'pending',
+              amount: parseFloat(formData.valor_mensal),
+              created_at: new Date().toISOString()
+            }]);
+
+          if (createPaymentError) throw createPaymentError;
+        }
+      }
 
       toast({
         title: "Cliente atualizado",
@@ -196,7 +239,7 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
                 label="Mensalidade Recorrente (R$)"
                 type="text"
                 value={formData.monthly_fee}
-                onChange={(e) => setFormData({ ...formData, monthly_fee: formatCurrency(e.target.value) })}
+                onChange={(e) => setFormData({ ...formData, monthly_fee: formatCurrency(e.target.value), valor_mensal: formatCurrency(e.target.value) })}
                 placeholder="Ex: R$ 157,00"
                 required
               />
@@ -204,10 +247,10 @@ export const EditClientModal: React.FC<EditClientModalProps> = ({
           )}
 
           <Input
-            label="Data de Vencimento"
+            label="Data Base de Cobrança"
             type="date"
-            value={formData.plan_expiry.split('T')[0]}
-            onChange={(e) => setFormData({ ...formData, plan_expiry: e.target.value })}
+            value={formData.data_base_cliente}
+            onChange={(e) => setFormData({ ...formData, data_base_cliente: e.target.value })}
             required
           />
 
