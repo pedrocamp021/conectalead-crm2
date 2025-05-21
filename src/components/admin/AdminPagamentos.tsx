@@ -3,8 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { useToast } from '../ui/use-toast';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Search, Filter, Calendar, DollarSign, CheckCircle, XCircle, Clock, Loader2, ArrowLeft } from 'lucide-react';
+import { Search, Filter, Calendar, DollarSign, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
 
 interface Payment {
   id: string;
@@ -14,7 +13,6 @@ interface Payment {
   status: 'pending' | 'paid' | 'late';
   amount: number;
   reference_month: string;
-  payment_type: 'primeira' | 'mensalidade';
   clients?: {
     name: string;
     email: string;
@@ -28,7 +26,6 @@ export default function AdminPagamentos() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
-  const [editingPayment, setEditingPayment] = useState<{id: string, field: string, value: any} | null>(null);
 
   useEffect(() => {
     fetchPayments();
@@ -61,94 +58,30 @@ export default function AdminPagamentos() {
     }
   };
 
-  const handleConfirmPayment = async (payment: Payment) => {
-    try {
-      const { error } = await supabase
-        .from('payments')
-        .update({
-          status: 'paid',
-          payment_date: new Date().toISOString()
-        })
-        .eq('id', payment.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Pagamento confirmado",
-        description: "O status do pagamento foi atualizado com sucesso.",
-      });
-
-      fetchPayments();
-    } catch (error) {
-      console.error('Error confirming payment:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível confirmar o pagamento.",
-      });
-    }
-  };
-
-  const handleRevertPayment = async (payment: Payment) => {
-    try {
-      const { error } = await supabase
-        .from('payments')
-        .update({
-          status: 'pending',
-          payment_date: null
-        })
-        .eq('id', payment.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Pagamento revertido",
-        description: "O status do pagamento foi revertido com sucesso.",
-      });
-
-      fetchPayments();
-    } catch (error) {
-      console.error('Error reverting payment:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível reverter o pagamento.",
-      });
-    }
-  };
-
-  const handleUpdateField = async (payment: Payment, field: string, value: any) => {
-    try {
-      const { error } = await supabase
-        .from('payments')
-        .update({ [field]: value })
-        .eq('id', payment.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Pagamento atualizado",
-        description: "O pagamento foi atualizado com sucesso.",
-      });
-
-      fetchPayments();
-    } catch (error) {
-      console.error('Error updating payment:', error);
-      toast({
-        variant: "destructive",
-        title: "Erro",
-        description: "Não foi possível atualizar o pagamento.",
-      });
-    } finally {
-      setEditingPayment(null);
-    }
-  };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
     }).format(value);
+  };
+
+  const getTotals = () => {
+    const now = new Date();
+    return payments.reduce((acc, payment) => {
+      const dueDate = new Date(payment.due_date);
+      
+      if (payment.status === 'paid') {
+        acc.received += payment.amount;
+      } else if (payment.status === 'pending') {
+        if (dueDate < now) {
+          acc.late += payment.amount;
+        } else {
+          acc.pending += payment.amount;
+        }
+      }
+      
+      return acc;
+    }, { received: 0, pending: 0, late: 0 });
   };
 
   const filteredPayments = payments.filter(payment => {
@@ -167,11 +100,45 @@ export default function AdminPagamentos() {
     );
   }
 
+  const totals = getTotals();
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-gray-800">Controle de Pagamentos</h2>
         <p className="text-gray-600">Gerencie os pagamentos dos clientes</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="p-3 rounded-lg bg-green-100">
+              <DollarSign className="h-6 w-6 text-green-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-500">Total Recebido</span>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mt-4">{formatCurrency(totals.received)}</h3>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="p-3 rounded-lg bg-yellow-100">
+              <Clock className="h-6 w-6 text-yellow-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-500">A Receber</span>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mt-4">{formatCurrency(totals.pending)}</h3>
+        </div>
+
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="p-3 rounded-lg bg-red-100">
+              <XCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <span className="text-sm font-medium text-gray-500">Atrasado</span>
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mt-4">{formatCurrency(totals.late)}</h3>
+        </div>
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm space-y-4">
@@ -223,9 +190,6 @@ export default function AdminPagamentos() {
                 Cliente
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Tipo
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Valor
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -233,9 +197,6 @@ export default function AdminPagamentos() {
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Status
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ações
               </th>
             </tr>
           </thead>
@@ -251,67 +212,15 @@ export default function AdminPagamentos() {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm text-gray-900 capitalize">
-                    {payment.payment_type}
-                  </span>
+                  <div className="text-sm text-gray-900">
+                    {formatCurrency(payment.amount)}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  {editingPayment?.id === payment.id && editingPayment?.field === 'amount' ? (
-                    <input
-                      type="number"
-                      className="w-32 px-2 py-1 border border-gray-300 rounded text-sm"
-                      value={editingPayment.value}
-                      onChange={(e) => setEditingPayment({
-                        ...editingPayment,
-                        value: parseFloat(e.target.value)
-                      })}
-                      onBlur={() => handleUpdateField(payment, 'amount', editingPayment.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleUpdateField(payment, 'amount', editingPayment.value);
-                        }
-                      }}
-                      autoFocus
-                    />
-                  ) : (
-                    <div 
-                      className="text-sm text-gray-900 cursor-pointer hover:text-blue-600"
-                      onClick={() => setEditingPayment({
-                        id: payment.id,
-                        field: 'amount',
-                        value: payment.amount
-                      })}
-                    >
-                      {formatCurrency(payment.amount)}
-                    </div>
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {editingPayment?.id === payment.id && editingPayment?.field === 'due_date' ? (
-                    <input
-                      type="date"
-                      className="w-40 px-2 py-1 border border-gray-300 rounded text-sm"
-                      value={editingPayment.value}
-                      onChange={(e) => setEditingPayment({
-                        ...editingPayment,
-                        value: e.target.value
-                      })}
-                      onBlur={() => handleUpdateField(payment, 'due_date', editingPayment.value)}
-                      autoFocus
-                    />
-                  ) : (
-                    <div 
-                      className="flex items-center text-sm text-gray-900 cursor-pointer hover:text-blue-600"
-                      onClick={() => setEditingPayment({
-                        id: payment.id,
-                        field: 'due_date',
-                        value: payment.due_date.split('T')[0]
-                      })}
-                    >
-                      <Calendar className="h-4 w-4 text-gray-400 mr-1" />
-                      {new Date(payment.due_date).toLocaleDateString()}
-                    </div>
-                  )}
+                  <div className="flex items-center text-sm text-gray-900">
+                    <Calendar className="h-4 w-4 text-gray-400 mr-1" />
+                    {new Date(payment.due_date).toLocaleDateString()}
+                  </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`
@@ -324,29 +233,6 @@ export default function AdminPagamentos() {
                     {payment.status === 'pending' && 'Pendente'}
                     {payment.status === 'late' && 'Atrasado'}
                   </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <div className="flex justify-end space-x-2">
-                    {payment.status === 'pending' ? (
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={() => handleConfirmPayment(payment)}
-                        icon={<CheckCircle className="h-4 w-4" />}
-                      >
-                        Confirmar
-                      </Button>
-                    ) : payment.status === 'paid' ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleRevertPayment(payment)}
-                        icon={<ArrowLeft className="h-4 w-4" />}
-                      >
-                        Reverter
-                      </Button>
-                    ) : null}
-                  </div>
                 </td>
               </tr>
             ))}

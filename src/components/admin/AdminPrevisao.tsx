@@ -23,8 +23,6 @@ export default function AdminPrevisao() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [monthFilter, setMonthFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
 
   useEffect(() => {
     fetchPayments();
@@ -32,6 +30,10 @@ export default function AdminPrevisao() {
 
   const fetchPayments = async () => {
     try {
+      const currentDate = new Date();
+      const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+
       const { data, error } = await supabase
         .from('payments')
         .select(`
@@ -42,6 +44,8 @@ export default function AdminPrevisao() {
           )
         `)
         .eq('status', 'pending')
+        .gte('reference_month', startOfMonth.toISOString())
+        .lte('reference_month', endOfMonth.toISOString())
         .order('due_date');
 
       if (error) throw error;
@@ -59,16 +63,7 @@ export default function AdminPrevisao() {
   };
 
   const getTotalAmount = () => {
-    return payments
-      .filter(payment => {
-        if (monthFilter) {
-          const paymentMonth = new Date(payment.due_date).getMonth();
-          const filterMonth = new Date(monthFilter).getMonth();
-          return paymentMonth === filterMonth;
-        }
-        return true;
-      })
-      .reduce((sum, payment) => sum + (payment.amount || 0), 0);
+    return payments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
   };
 
   const formatCurrency = (value: number) => {
@@ -104,9 +99,7 @@ export default function AdminPrevisao() {
 
   const filteredPayments = payments.filter(payment => {
     const matchesSearch = payment.clients?.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesMonth = !monthFilter || new Date(payment.due_date).getMonth() === new Date(monthFilter).getMonth();
-    const matchesStatus = !statusFilter || payment.status === statusFilter;
-    return matchesSearch && matchesMonth && matchesStatus;
+    return matchesSearch;
   });
 
   if (isLoading) {
@@ -148,24 +141,6 @@ export default function AdminPrevisao() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
-          <Input
-            type="month"
-            value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
-            className="w-48"
-          />
-
-          <select
-            className="px-3 py-2 border border-gray-300 rounded-md"
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">Todos os status</option>
-            <option value="pending">Pendente</option>
-            <option value="paid">Pago</option>
-            <option value="late">Atrasado</option>
-          </select>
         </div>
       </div>
 
@@ -214,19 +189,15 @@ export default function AdminPrevisao() {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="text-sm text-gray-900">
-                    {new Date(payment.reference_month).toLocaleDateString()}
+                    {new Date(payment.reference_month).toLocaleDateString('pt-BR', {
+                      month: 'long',
+                      year: 'numeric'
+                    })}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`
-                    inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                    ${payment.status === 'paid' ? 'bg-green-100 text-green-800' : ''}
-                    ${payment.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}
-                    ${payment.status === 'late' ? 'bg-red-100 text-red-800' : ''}
-                  `}>
-                    {payment.status === 'paid' && 'Pago'}
-                    {payment.status === 'pending' && 'Pendente'}
-                    {payment.status === 'late' && 'Atrasado'}
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    Pendente
                   </span>
                 </td>
               </tr>
