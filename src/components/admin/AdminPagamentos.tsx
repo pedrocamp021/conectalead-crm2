@@ -4,7 +4,7 @@ import { useToast } from '../ui/use-toast';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Search, Filter, Calendar, DollarSign, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { Search, Filter, Calendar, DollarSign, CheckCircle, XCircle, Clock, Loader2, Info } from 'lucide-react';
 
 interface Client {
   id: string;
@@ -15,12 +15,14 @@ interface Client {
   proxima_data_pagamento: string | null;
   pagamento_confirmado: boolean;
   monthly_fee: number;
+  dia_pagamento: number;
 }
 
 interface PaymentModalData {
   client: Client;
   referenceMonth: string;
   paymentDate: string;
+  isFirstPayment: boolean;
 }
 
 export const AdminPagamentos: React.FC = () => {
@@ -111,32 +113,51 @@ export const AdminPagamentos: React.FC = () => {
     fetchClients();
   }, []);
 
+  const calculateNextPaymentDate = (client: Client) => {
+    const today = new Date();
+    const paymentDay = client.dia_pagamento || 1;
+    let nextDate = new Date(today.getFullYear(), today.getMonth(), paymentDay);
+    
+    // If today is past the payment day, move to next month
+    if (today > nextDate) {
+      nextDate = new Date(today.getFullYear(), today.getMonth() + 1, paymentDay);
+    }
+    
+    return nextDate.toISOString().split('T')[0];
+  };
+
   const handleConfirmPayment = async () => {
     if (!paymentModal) return;
 
     try {
       const paymentDate = new Date(paymentModal.paymentDate);
-      const dueDate = new Date(paymentModal.client.proxima_data_pagamento || '');
-      const isPaidEarly = paymentDate < dueDate;
+      const referenceDate = new Date(paymentModal.referenceMonth);
+      const nextPaymentDate = calculateNextPaymentDate(paymentModal.client);
+      
+      // Check if payment is early
+      const isPaidEarly = paymentDate < new Date(nextPaymentDate);
 
-      const { error } = await supabase
+      // Create payment record
+      const { error: paymentError } = await supabase
         .from('payments')
         .insert({
           client_id: paymentModal.client.id,
-          reference_month: paymentModal.referenceMonth,
-          payment_date: paymentModal.paymentDate,
+          reference_month: referenceDate,
+          payment_date: paymentDate.toISOString(),
           paid_early: isPaidEarly,
           amount: paymentModal.client.monthly_fee,
           status: 'paid'
         });
 
-      if (error) throw error;
+      if (paymentError) throw paymentError;
 
       // Update client status
       const { error: updateError } = await supabase
         .from('clients')
         .update({
-          data_pagamento_real: paymentModal.paymentDate,
+          data_pagamento_real: paymentDate.toISOString(),
+          data_pagamento_atual: new Date().toISOString(),
+          proxima_data_pagamento: nextPaymentDate,
           pagamento_confirmado: true,
           status: 'ativo'
         })
@@ -146,7 +167,7 @@ export const AdminPagamentos: React.FC = () => {
 
       toast({
         title: "Pagamento confirmado",
-        description: "O pagamento foi registrado com sucesso.",
+        description: `Pagamento registrado para ${formatReferenceMonth(referenceDate.toISOString())}.`,
       });
 
       setPaymentModal(null);
@@ -163,10 +184,15 @@ export const AdminPagamentos: React.FC = () => {
 
   const handleUnmarkPayment = async (client: Client) => {
     try {
+      // Calculate next payment date based on billing day
+      const nextPaymentDate = calculateNextPaymentDate(client);
+
       const { error } = await supabase
         .from('clients')
         .update({
           data_pagamento_real: null,
+          data_pagamento_atual: null,
+          proxima_data_pagamento: nextPaymentDate,
           pagamento_confirmado: false,
           status: 'pendente'
         })
@@ -403,7 +429,8 @@ export const AdminPagamentos: React.FC = () => {
                         setPaymentModal({
                           client,
                           referenceMonth: today.toISOString().split('T')[0],
-                          paymentDate: today.toISOString().split('T')[0]
+                          paymentDate: today.toISOString().split('T')[0],
+                          isFirstPayment: !client.data_pagamento_atual
                         });
                       }}
                       icon={<CheckCircle className="h-4 w-4" />}
@@ -422,7 +449,9 @@ export const AdminPagamentos: React.FC = () => {
       <Dialog open={!!paymentModal} onOpenChange={() => setPaymentModal(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Registrar Pagamento</DialogTitle>
+            <DialogTitle>
+              {paymentModal?.isFirstPayment ? 'Registrar Primeira Parcela' : 'Registrar Pagamento'}
+            </DialogTitle>
           </DialogHeader>
           
           <div className="space-y-4 mt-4">
@@ -461,6 +490,19 @@ export const AdminPagamentos: React.FC = () => {
                 }}
               />
             </div>
+
+            {paymentModal?.isFirstPayment && (
+              <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
+                <div className="flex">
+                  <Info className="h-5 w-5 text-blue-400" />
+                  <div className="ml-3">
+                    <p className="text-sm text-blue-700">
+                      Esta é a primeira parcela do cliente. As próximas serão geradas automaticamente.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end space-x-2">
               <Button
