@@ -21,7 +21,7 @@ interface Payment {
   };
 }
 
-export const AdminPagamentos: React.FC = () => {
+export default function AdminPagamentos() {
   const { toast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -344,4 +344,4 @@ export const AdminPagamentos: React.FC = () => {
       </Dialog>
     </div>
   );
-};
+}

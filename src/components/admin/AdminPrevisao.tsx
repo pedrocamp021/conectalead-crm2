@@ -18,7 +18,7 @@ interface Payment {
   };
 }
 
-export const AdminPrevisao: React.FC = () => {
+export default function AdminPrevisao() {
   const { toast } = useToast();
   const [payments, setPayments] = useState<Payment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -236,4 +236,4 @@ export const AdminPrevisao: React.FC = () => {
       </div>
     </div>
   );
-};
+}
